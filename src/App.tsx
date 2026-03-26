@@ -28,6 +28,7 @@ import DriverSettingsInfo from "./pages/driver/DriverSettingsInfo";
 import DriverTerms from "./pages/driver/DriverTerms";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ChatRoom from "./pages/ChatRoom";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
