@@ -1,16 +1,72 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import SplashScreen from './SplashScreen';
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const { user, role, loading } = useAuth();
+  const navigate = useNavigate();
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashDone, setSplashDone] = useState(false);
+
+  const handleSplashComplete = useCallback(() => {
+    setSplashDone(true);
+    setShowSplash(false);
+  }, []);
+
+  useEffect(() => {
+    if (!splashDone || loading) return;
+
+    // No active session → new user, show role selection
+    if (!user) {
+      navigate('/welcome', { replace: true });
+      return;
+    }
+
+    // Authenticated — route by role
+    const routeDriver = async () => {
+      const { data: profile } = await supabase.from('driver_profiles')
+        .select('onboarding_completed, approval_status')
+        .eq('user_id', user.id).maybeSingle();
+
+      if (!profile || !profile.onboarding_completed) {
+        navigate('/driver/onboarding', { replace: true });
+        return;
+      }
+      if (profile.approval_status === 'pending' || profile.approval_status === 'rejected') {
+        navigate('/driver/status', { replace: true });
+        return;
+      }
+      if (profile.approval_status === 'approved') {
+        const { data: payout } = await supabase.from('driver_payout_methods')
+          .select('id').eq('driver_user_id', user.id).maybeSingle();
+        if (!payout) {
+          navigate('/driver/congrats', { replace: true });
+          return;
+        }
+      }
+      navigate('/driver', { replace: true });
+    };
+
+    console.log('[Index] Routing for role:', role);
+    switch (role) {
+      case 'store': navigate('/store', { replace: true }); break;
+      case 'driver': routeDriver(); break;
+      case 'admin': navigate('/admin', { replace: true }); break;
+      default: navigate('/welcome', { replace: true });
+    }
+  }, [user, role, loading, navigate, splashDone]);
+
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-pulse w-4 h-4 rounded-full bg-accent" />
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
