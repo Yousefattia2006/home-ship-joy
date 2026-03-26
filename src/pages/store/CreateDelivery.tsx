@@ -26,10 +26,6 @@ export default function CreateDelivery() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) { navigate('/auth', { replace: true }); }
-  }, [user, authLoading, navigate]);
 
   const [pickup, setPickup] = useState<LocationData>({ address: '', lat: null, lng: null });
   const [dropoff, setDropoff] = useState<LocationData>({ address: '', lat: null, lng: null });
