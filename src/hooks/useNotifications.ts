@@ -5,7 +5,8 @@ export async function sendNotification(
   title: string,
   body: string,
   type: string = 'info',
-  deliveryId?: string
+  deliveryId?: string,
+  data?: Record<string, unknown>
 ) {
   await supabase.from('notifications').insert({
     user_id: userId,
@@ -13,49 +14,89 @@ export async function sendNotification(
     body,
     type,
     delivery_id: deliveryId || null,
+    data: data || null,
   });
 }
 
+/** Insert notification for: new_order, driver_accepted, arriving_pickup, near_customer, cancelled, delivered */
+export async function sendOrderEventNotification(
+  event: 'new_order' | 'driver_accepted' | 'arriving_pickup' | 'near_customer' | 'cancelled' | 'delivered',
+  targetUserId: string,
+  deliveryId: string,
+  translations: any,
+  extraData?: Record<string, unknown>
+) {
+  const map: Record<string, { titleKey: string; bodyKey: string; fallbackTitle: string; fallbackBody: string }> = {
+    new_order: {
+      titleKey: 'newOrder', bodyKey: 'newOrderBody',
+      fallbackTitle: 'New Order', fallbackBody: 'A new delivery order has been created.',
+    },
+    driver_accepted: {
+      titleKey: 'driverAccepted', bodyKey: 'driverAcceptedBody',
+      fallbackTitle: 'Driver Accepted', fallbackBody: 'A driver has accepted your delivery.',
+    },
+    arriving_pickup: {
+      titleKey: 'arrivedPickup', bodyKey: 'arrivedPickupBody',
+      fallbackTitle: 'Arrived at Pickup', fallbackBody: 'The driver has arrived at the pickup location.',
+    },
+    near_customer: {
+      titleKey: 'nearCustomer', bodyKey: 'nearCustomerBody',
+      fallbackTitle: 'Driver Nearby', fallbackBody: 'The driver is near the customer.',
+    },
+    cancelled: {
+      titleKey: 'orderCancelled', bodyKey: 'orderCancelledBody',
+      fallbackTitle: 'Order Cancelled', fallbackBody: 'The delivery order has been cancelled.',
+    },
+    delivered: {
+      titleKey: 'orderDelivered', bodyKey: 'orderDeliveredBody',
+      fallbackTitle: 'Order Delivered', fallbackBody: 'The order has been delivered successfully.',
+    },
+  };
+
+  const m = map[event];
+  if (!m) return;
+
+  const title = translations?.notifications?.[m.titleKey] || m.fallbackTitle;
+  const body = translations?.notifications?.[m.bodyKey] || m.fallbackBody;
+
+  await sendNotification(targetUserId, title, body, event, deliveryId, extraData);
+}
+
+/** Legacy wrapper used by DriverDashboard */
 export async function sendOrderStatusNotification(
   delivery: any,
   newStatus: string,
   translations: any
 ) {
-  const statusMessages: Record<string, { storeTitle: string; storeBody: string; driverTitle?: string; driverBody?: string }> = {
-    driver_accepted: {
-      storeTitle: translations?.driverAccepted || 'Driver Accepted',
-      storeBody: translations?.driverAcceptedBody || 'A driver has accepted your delivery.',
-    },
-    arriving_pickup: {
-      storeTitle: translations?.driverNearStore || 'Driver Near Store',
-      storeBody: translations?.driverNearStoreBody || 'The driver is arriving at your store.',
-    },
-    picked_up: {
-      storeTitle: translations?.orderPickedUp || 'Order Picked Up',
-      storeBody: translations?.orderPickedUpBody || 'The driver has picked up the order.',
-    },
-    en_route: {
-      storeTitle: translations?.driverEnRoute || 'Driver En Route',
-      storeBody: translations?.driverEnRouteBody || 'The driver is on the way to the customer.',
-    },
-    delivered: {
-      storeTitle: translations?.orderDelivered || 'Order Delivered',
-      storeBody: translations?.orderDeliveredBody || 'The order has been delivered successfully.',
-      driverTitle: translations?.earningsUpdated || 'Earnings Updated',
-      driverBody: translations?.earningsUpdatedBody || 'Your earnings have been updated.',
-    },
+  const statusToEvent: Record<string, string> = {
+    driver_accepted: 'driver_accepted',
+    arriving_pickup: 'arriving_pickup',
+    picked_up: 'arriving_pickup',
+    en_route: 'near_customer',
+    delivered: 'delivered',
+    cancelled: 'cancelled',
   };
-
-  const msg = statusMessages[newStatus];
-  if (!msg) return;
+  const event = statusToEvent[newStatus];
+  if (!event) return;
 
   // Notify store
   if (delivery.store_user_id) {
-    await sendNotification(delivery.store_user_id, msg.storeTitle, msg.storeBody, 'order_update', delivery.id);
+    await sendOrderEventNotification(
+      event as any,
+      delivery.store_user_id,
+      delivery.id,
+      translations,
+    );
   }
 
-  // Notify driver
-  if (msg.driverTitle && delivery.driver_user_id) {
-    await sendNotification(delivery.driver_user_id, msg.driverTitle, msg.driverBody!, 'order_update', delivery.id);
+  // Notify driver for delivered
+  if (newStatus === 'delivered' && delivery.driver_user_id) {
+    await sendNotification(
+      delivery.driver_user_id,
+      translations?.notifications?.orderDelivered || 'Earnings Updated',
+      translations?.notifications?.orderDeliveredBody || 'Your earnings have been updated.',
+      'delivered',
+      delivery.id,
+    );
   }
 }
