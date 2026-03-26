@@ -61,3 +61,42 @@ export async function sendOrderEventNotification(
 
   await sendNotification(targetUserId, title, body, event, deliveryId, extraData);
 }
+
+/** Legacy wrapper used by DriverDashboard */
+export async function sendOrderStatusNotification(
+  delivery: any,
+  newStatus: string,
+  translations: any
+) {
+  const statusToEvent: Record<string, string> = {
+    driver_accepted: 'driver_accepted',
+    arriving_pickup: 'arriving_pickup',
+    picked_up: 'arriving_pickup',
+    en_route: 'near_customer',
+    delivered: 'delivered',
+    cancelled: 'cancelled',
+  };
+  const event = statusToEvent[newStatus];
+  if (!event) return;
+
+  // Notify store
+  if (delivery.store_user_id) {
+    await sendOrderEventNotification(
+      event as any,
+      delivery.store_user_id,
+      delivery.id,
+      translations,
+    );
+  }
+
+  // Notify driver for delivered
+  if (newStatus === 'delivered' && delivery.driver_user_id) {
+    await sendNotification(
+      delivery.driver_user_id,
+      translations?.notifications?.orderDelivered || 'Earnings Updated',
+      translations?.notifications?.orderDeliveredBody || 'Your earnings have been updated.',
+      'delivered',
+      delivery.id,
+    );
+  }
+}
