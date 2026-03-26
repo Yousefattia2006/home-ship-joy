@@ -4,7 +4,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, ArrowRight, MessageCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 
 interface Conversation {
   id: string;

@@ -28,6 +28,7 @@ import DriverSettingsInfo from "./pages/driver/DriverSettingsInfo";
 import DriverTerms from "./pages/driver/DriverTerms";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ChatRoom from "./pages/ChatRoom";
+import Messages from "./pages/Messages";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -66,7 +67,8 @@ const App = () => (
             <Route path="/driver/settings" element={<DriverSettings />} />
             <Route path="/driver/settings/info" element={<DriverSettingsInfo />} />
             <Route path="/driver/settings/terms" element={<DriverTerms />} />
-            {/* Messaging - inside order only */}
+            {/* Messaging */}
+            <Route path="/messages" element={<Messages />} />
             <Route path="/messages/:id" element={<ChatRoom />} />
             {/* Admin routes */}
             <Route path="/admin" element={<AdminDashboard />} />

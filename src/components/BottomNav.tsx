@@ -1,12 +1,12 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Package, Settings, Wallet } from 'lucide-react';
+import { Home, Package, Settings, Wallet, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
   path: string;
   icon: React.ElementType;
-  labelKey: 'home' | 'deliveries' | 'settings' | 'payments';
+  labelKey: 'home' | 'deliveries' | 'settings' | 'payments' | 'messages';
 }
 
 interface BottomNavProps {
@@ -46,11 +46,13 @@ export function BottomNav({ items }: BottomNavProps) {
 export const storeNavItems: NavItem[] = [
   { path: '/store', icon: Home, labelKey: 'home' },
   { path: '/store/deliveries', icon: Package, labelKey: 'deliveries' },
+  { path: '/messages', icon: MessageCircle, labelKey: 'messages' },
   { path: '/store/settings', icon: Settings, labelKey: 'settings' },
 ];
 
 export const driverNavItems: NavItem[] = [
   { path: '/driver', icon: Home, labelKey: 'home' },
+  { path: '/messages', icon: MessageCircle, labelKey: 'messages' },
   { path: '/driver/payments', icon: Wallet, labelKey: 'payments' },
   { path: '/driver/settings', icon: Settings, labelKey: 'settings' },
 ];

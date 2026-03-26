@@ -246,6 +246,9 @@ export const translations = {
       orderPickedUp: 'Order picked up',
       imNear: 'I am near',
       typePlaceholder: 'Type a message...',
+      messages: 'Messages',
+      noMessages: 'No messages yet',
+      unknown: 'Unknown',
     },
     cancellation: {
       title: 'Cancel Order',
@@ -630,6 +633,9 @@ export const translations = {
       orderPickedUp: 'تم استلام الطلب',
       imNear: 'أنا قريب',
       typePlaceholder: 'اكتب رسالة...',
+      messages: 'الرسائل',
+      noMessages: 'لا توجد رسائل بعد',
+      unknown: 'غير معروف',
     },
     cancellation: {
       title: 'إلغاء الطلب',
