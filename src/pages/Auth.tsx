@@ -14,10 +14,10 @@ import { Loader2, Store, Bike } from 'lucide-react';
 type Mode = 'login' | 'signup';
 
 export default function Auth() {
-  const { t, language } = useLanguage();
+  const { t, lang, dir } = useLanguage();
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const isRTL = language === 'ar';
+  const isRTL = lang === 'ar';
 
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');

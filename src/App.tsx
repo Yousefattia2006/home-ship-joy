@@ -42,6 +42,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/welcome" element={<RoleSelection />} />
             <Route path="/welcome/store" element={<StoreSetup />} />
             <Route path="/welcome/driver" element={<DriverSetup />} />
