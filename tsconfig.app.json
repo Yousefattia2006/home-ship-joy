@@ -24,10 +24,8 @@
     "skipLibCheck": true,
     "strict": false,
     "target": "ES2020",
-    "typeRoots": ["./node_modules/@types"],
     "types": [
-      "vitest/globals",
-      "google.maps"
+      "vitest/globals"
     ],
     "useDefineForClassFields": true
   },
