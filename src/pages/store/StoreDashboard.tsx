@@ -17,8 +17,7 @@ export default function StoreDashboard() {
   const [stats, setStats] = useState({ total: 0, active: 0, completed: 0 });
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) { navigate('/', { replace: true }); return; }
+    if (!user) return;
     const fetchDeliveries = async () => {
       const { data } = await supabase.from('deliveries')
         .select('*')

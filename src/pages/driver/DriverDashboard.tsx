@@ -31,11 +31,7 @@ export default function DriverDashboard() {
   const [isWithin50m, setIsWithin50m] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      navigate('/', { replace: true });
-      return;
-    }
+    if (!user) return;
     const check = async () => {
       const { data: profile } = await supabase.from('driver_profiles')
         .select('*').eq('user_id', user.id).maybeSingle();

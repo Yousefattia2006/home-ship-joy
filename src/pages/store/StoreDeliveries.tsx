@@ -15,8 +15,7 @@ export default function StoreDeliveries() {
   const [tab, setTab] = useState<'active' | 'history'>('active');
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) { navigate('/', { replace: true }); return; }
+    if (!user) return;
     supabase
       .from('deliveries')
       .select('*')
