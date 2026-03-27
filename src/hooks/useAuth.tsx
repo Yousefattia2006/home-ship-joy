@@ -118,18 +118,23 @@ export function useAuth() {
     if (error) throw error;
     if (!data.user) throw new Error('Signup failed');
 
-    // Try to insert role/profile — these may fail if no session (RLS), which is OK
-    // The role can be assigned after OTP verification
-    try {
-      await supabase.from('user_roles').insert({ user_id: data.user.id, role: selectedRole });
-      if (selectedRole === 'store') {
-        await supabase.from('store_profiles').insert({ user_id: data.user.id, store_name: fullName, phone });
-      } else if (selectedRole === 'driver') {
-        await supabase.from('driver_profiles').insert({ user_id: data.user.id, full_name: fullName, phone });
+    const userId = data.user.id;
+
+    // Fire-and-forget so signup flow isn't blocked when email verification returns no session.
+    void (async () => {
+      try {
+        await supabase.from('user_roles').insert({ user_id: userId, role: selectedRole });
+
+        if (selectedRole === 'store') {
+          await supabase.from('store_profiles').insert({ user_id: userId, store_name: fullName, phone });
+        } else if (selectedRole === 'driver') {
+          await supabase.from('driver_profiles').insert({ user_id: userId, full_name: fullName, phone });
+        }
+      } catch (profileErr) {
+        console.warn('Profile/role insert skipped until verified session:', profileErr);
       }
-    } catch (profileErr) {
-      console.warn('Profile insert skipped (no session yet):', profileErr);
-    }
+    })();
+
     return data;
   };
 
