@@ -10,11 +10,12 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Loader2, Store, Bike } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 type Mode = 'login' | 'signup';
 
 export default function Auth() {
-  const { t, lang, dir } = useLanguage();
+  const { t, lang } = useLanguage();
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const isRTL = lang === 'ar';
@@ -32,11 +33,37 @@ export default function Auth() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        await signIn(email, password);
+        const data = await signIn(email, password);
+        const userId = data.user?.id;
+        if (userId) {
+          // Check if user is verified
+          const { data: checkData } = await supabase.functions.invoke('send-otp', {
+            body: { action: 'check', user_id: userId },
+          });
+          if (checkData && !checkData.is_verified) {
+            // Not verified — send new OTP and redirect
+            await supabase.auth.signOut();
+            await supabase.functions.invoke('send-otp', {
+              body: { action: 'send', user_id: userId, email },
+            });
+            toast.error(t.auth.notVerified);
+            navigate('/verify', { state: { email, userId, role: undefined } });
+            return;
+          }
+        }
         navigate('/', { replace: true });
       } else {
-        await signUp(email, password, fullName, phone, selectedRole);
-        toast.success(t.auth.checkEmail);
+        const data = await signUp(email, password, fullName, phone, selectedRole);
+        const userId = data.user?.id;
+        if (userId) {
+          // Send OTP
+          await supabase.functions.invoke('send-otp', {
+            body: { action: 'send', user_id: userId, email },
+          });
+          // Sign out so user isn't logged in until verified
+          await supabase.auth.signOut();
+          navigate('/verify', { state: { email, userId, role: selectedRole } });
+        }
       }
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong');
@@ -47,7 +74,6 @@ export default function Auth() {
 
   return (
     <div className={cn('min-h-screen bg-background flex flex-col', isRTL && 'rtl')} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4">
         <LanguageToggle />
         <h1 className="text-lg font-bold text-foreground font-['Inter']">Tawseel</h1>
@@ -61,14 +87,12 @@ export default function Auth() {
           transition={{ duration: 0.4 }}
           className="w-full max-w-sm space-y-6"
         >
-          {/* Title */}
           <div className="text-center space-y-1">
             <h2 className="text-2xl font-bold text-foreground">
               {mode === 'login' ? t.auth.login : t.auth.signup}
             </h2>
           </div>
 
-          {/* Mode tabs */}
           <div className="flex rounded-xl bg-secondary p-1 gap-1">
             {(['login', 'signup'] as Mode[]).map((m) => (
               <button
@@ -117,7 +141,6 @@ export default function Auth() {
                       className="h-12 rounded-xl bg-secondary border-0"
                     />
                   </div>
-                  {/* Role selector */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">{t.auth.selectRole}</Label>
                     <div className="flex gap-3">
@@ -179,7 +202,6 @@ export default function Auth() {
             </Button>
           </form>
 
-          {/* Toggle mode */}
           <p className="text-center text-sm text-muted-foreground">
             {mode === 'login' ? t.auth.noAccount : t.auth.hasAccount}{' '}
             <button
