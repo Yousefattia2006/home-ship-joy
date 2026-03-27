@@ -111,20 +111,24 @@ export function useAuth() {
       email,
       password,
       options: {
-        data: { full_name: fullName, phone },
+        data: { full_name: fullName, phone, selected_role: selectedRole },
         emailRedirectTo: window.location.origin,
       },
     });
     if (error) throw error;
+    if (!data.user) throw new Error('Signup failed');
 
-    if (data.user) {
+    // Try to insert role/profile — these may fail if no session (RLS), which is OK
+    // The role can be assigned after OTP verification
+    try {
       await supabase.from('user_roles').insert({ user_id: data.user.id, role: selectedRole });
-
       if (selectedRole === 'store') {
         await supabase.from('store_profiles').insert({ user_id: data.user.id, store_name: fullName, phone });
       } else if (selectedRole === 'driver') {
         await supabase.from('driver_profiles').insert({ user_id: data.user.id, full_name: fullName, phone });
       }
+    } catch (profileErr) {
+      console.warn('Profile insert skipped (no session yet):', profileErr);
     }
     return data;
   };
