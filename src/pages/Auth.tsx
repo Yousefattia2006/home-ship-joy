@@ -55,15 +55,20 @@ export default function Auth() {
       } else {
         const data = await signUp(email, password, fullName, phone, selectedRole);
         const userId = data.user?.id;
-        if (userId) {
-          // Send OTP
+        if (!userId) {
+          throw new Error('Signup failed — please try again.');
+        }
+        // Send OTP (don't block navigation if it fails)
+        try {
           await supabase.functions.invoke('send-otp', {
             body: { action: 'send', user_id: userId, email },
           });
-          // Sign out so user isn't logged in until verified
-          await supabase.auth.signOut();
-          navigate('/verify', { state: { email, userId, role: selectedRole } });
+        } catch (otpErr) {
+          console.warn('send-otp failed, user can resend from verify page:', otpErr);
         }
+        // Sign out so user isn't logged in until verified
+        await supabase.auth.signOut();
+        navigate('/verify', { state: { email, userId, role: selectedRole } });
       }
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong');
