@@ -58,17 +58,19 @@ export default function Auth() {
         if (!userId) {
           throw new Error('Signup failed — please try again.');
         }
-        // Send OTP (don't block navigation if it fails)
-        try {
-          await supabase.functions.invoke('send-otp', {
-            body: { action: 'send', user_id: userId, email },
-          });
-        } catch (otpErr) {
-          console.warn('send-otp failed, user can resend from verify page:', otpErr);
-        }
-        // Sign out so user isn't logged in until verified
-        await supabase.auth.signOut();
+
         navigate('/verify', { state: { email, userId, role: selectedRole } });
+
+        // Fire-and-forget so signup UI never gets stuck
+        void supabase.functions.invoke('send-otp', {
+          body: { action: 'send', user_id: userId, email },
+        }).catch((otpErr) => {
+          console.warn('send-otp failed, user can resend from verify page:', otpErr);
+        });
+
+        void supabase.auth.signOut().catch((signOutErr) => {
+          console.warn('signOut after signup failed:', signOutErr);
+        });
       }
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong');
