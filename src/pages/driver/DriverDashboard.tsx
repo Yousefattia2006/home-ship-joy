@@ -409,6 +409,30 @@ export default function DriverDashboard() {
               </div>
             )}
 
+            {/* Navigate to Store (before pickup) */}
+            {['driver_accepted', 'arriving_pickup'].includes(activeDelivery.status) && activeDelivery.pickup_lat && activeDelivery.pickup_lng && (
+              <Button
+                variant="outline"
+                className="w-full h-12 font-bold rounded-xl gap-2 border-accent text-accent hover:bg-accent/10"
+                onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${activeDelivery.pickup_lat},${activeDelivery.pickup_lng}&travelmode=driving`, '_blank')}
+              >
+                <Navigation className="w-4 h-4" />
+                {t.driver.navigateToStore}
+              </Button>
+            )}
+
+            {/* Navigate to Customer (after pickup) */}
+            {['picked_up', 'en_route'].includes(activeDelivery.status) && activeDelivery.dropoff_lat && activeDelivery.dropoff_lng && (
+              <Button
+                variant="outline"
+                className="w-full h-12 font-bold rounded-xl gap-2 border-primary text-primary hover:bg-primary/10"
+                onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${activeDelivery.dropoff_lat},${activeDelivery.dropoff_lng}&travelmode=driving`, '_blank')}
+              >
+                <Navigation className="w-4 h-4" />
+                {t.driver.navigateToCustomer}
+              </Button>
+            )}
+
             {/* Proof of delivery photo - only when en_route */}
             {activeDelivery.status === 'en_route' && (
               <div className="space-y-2">
