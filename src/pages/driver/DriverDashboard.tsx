@@ -12,7 +12,7 @@ import { CancellationDialog } from '@/components/CancellationDialog';
 import { ReportDialog } from '@/components/ReportDialog';
 import { Button } from '@/components/ui/button';
 import { sendOrderStatusNotification } from '@/hooks/useNotifications';
-import { MapPin, Bike, Wallet, Package, Star, Lock, Phone, Flag, XCircle, Camera } from 'lucide-react';
+import { MapPin, Bike, Wallet, Package, Star, Lock, Phone, Flag, XCircle, Camera, Navigation } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
