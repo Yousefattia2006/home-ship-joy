@@ -71,7 +71,7 @@ export default function Auth() {
         // Sign out so unverified user can't access protected routes
         await supabase.auth.signOut().catch(() => {});
 
-        navigate('/verify', { state: { email, userId, role: selectedRole } });
+        navigate('/verify', { state: { email, password, userId, role: selectedRole } });
       }
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong');
