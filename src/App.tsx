@@ -27,6 +27,7 @@ import DriverSettings from "./pages/driver/DriverSettings";
 import DriverSettingsInfo from "./pages/driver/DriverSettingsInfo";
 import DriverTerms from "./pages/driver/DriverTerms";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLogin from "./pages/admin/AdminLogin";
 import ChatRoom from "./pages/ChatRoom";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
@@ -76,6 +77,7 @@ const App = () => (
             {/* Notifications */}
             <Route path="/notifications" element={<Notifications />} />
             {/* Admin routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminDashboard />} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

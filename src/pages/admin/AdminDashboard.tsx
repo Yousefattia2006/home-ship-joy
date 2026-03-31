@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +16,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 
 export default function AdminDashboard() {
   const { t } = useLanguage();
-  const { signOut } = useAuth();
+  const { user, role, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<'overview' | 'applications' | 'drivers' | 'deliveries' | 'stores' | 'analytics' | 'reports' | 'cancellations'>('overview');
   const [drivers, setDrivers] = useState<any[]>([]);
   const [deliveries, setDeliveries] = useState<any[]>([]);
@@ -31,14 +33,22 @@ export default function AdminDashboard() {
   const [adjustDesc, setAdjustDesc] = useState('');
   const [adminNote, setAdminNote] = useState('');
 
+  // Redirect non-admin users
   useEffect(() => {
+    if (!authLoading && (!user || role !== 'admin')) {
+      navigate('/admin/login', { replace: true });
+    }
+  }, [authLoading, user, role, navigate]);
+
+  useEffect(() => {
+    if (authLoading || role !== 'admin') return;
     fetchDrivers();
     fetchDeliveries();
     fetchStores();
     fetchPayoutMethods();
     fetchReports();
     fetchCancellations();
-  }, []);
+  }, [authLoading, role]);
 
   const fetchDrivers = async () => {
     const { data } = await supabase.from('driver_profiles').select('*').order('created_at', { ascending: false });
@@ -181,6 +191,14 @@ export default function AdminDashboard() {
     { key: 'reports', label: 'Reports' },
     { key: 'cancellations', label: 'Cancellations' },
   ] as const;
+
+  if (authLoading || role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background safe-top">
