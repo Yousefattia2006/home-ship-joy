@@ -16,7 +16,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 
 export default function AdminDashboard() {
   const { t } = useLanguage();
-  const { signOut } = useAuth();
+  const { user, role, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<'overview' | 'applications' | 'drivers' | 'deliveries' | 'stores' | 'analytics' | 'reports' | 'cancellations'>('overview');
   const [drivers, setDrivers] = useState<any[]>([]);
   const [deliveries, setDeliveries] = useState<any[]>([]);
