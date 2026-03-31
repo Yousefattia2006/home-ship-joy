@@ -16,8 +16,9 @@ export default function VerifyOTP() {
   const location = useLocation();
   const isRTL = lang === 'ar';
 
-  const { email, userId, role } = (location.state as {
+  const { email, password, userId, role } = (location.state as {
     email?: string;
+    password?: string;
     userId?: string;
     role?: string;
   }) || {};
