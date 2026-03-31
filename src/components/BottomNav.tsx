@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Package, Settings, Wallet, MessageCircle, Bell } from 'lucide-react';
+import { Home, Package, Settings, Wallet, Bell } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { cn } from '@/lib/utils';
 
@@ -47,14 +47,12 @@ export const storeNavItems: NavItem[] = [
   { path: '/store', icon: Home, labelKey: 'home' },
   { path: '/store/deliveries', icon: Package, labelKey: 'deliveries' },
   { path: '/notifications', icon: Bell, labelKey: 'notifications' },
-  { path: '/messages', icon: MessageCircle, labelKey: 'messages' },
   { path: '/store/settings', icon: Settings, labelKey: 'settings' },
 ];
 
 export const driverNavItems: NavItem[] = [
   { path: '/driver', icon: Home, labelKey: 'home' },
   { path: '/notifications', icon: Bell, labelKey: 'notifications' },
-  { path: '/messages', icon: MessageCircle, labelKey: 'messages' },
   { path: '/driver/payments', icon: Wallet, labelKey: 'payments' },
   { path: '/driver/settings', icon: Settings, labelKey: 'settings' },
 ];
