@@ -53,7 +53,6 @@ export const storeNavItems: NavItem[] = [
 export const driverNavItems: NavItem[] = [
   { path: '/driver', icon: Home, labelKey: 'home' },
   { path: '/notifications', icon: Bell, labelKey: 'notifications' },
-  { path: '/messages', icon: MessageCircle, labelKey: 'messages' },
   { path: '/driver/payments', icon: Wallet, labelKey: 'payments' },
   { path: '/driver/settings', icon: Settings, labelKey: 'settings' },
 ];
