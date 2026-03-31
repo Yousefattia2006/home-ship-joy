@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import Index from "./pages/Index";
 import RoleSelection from "./pages/RoleSelection";
@@ -27,7 +27,6 @@ import DriverSettings from "./pages/driver/DriverSettings";
 import DriverSettingsInfo from "./pages/driver/DriverSettingsInfo";
 import DriverTerms from "./pages/driver/DriverTerms";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminLogin from "./pages/admin/AdminLogin";
 import ChatRoom from "./pages/ChatRoom";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
@@ -76,8 +75,8 @@ const App = () => (
             <Route path="/messages/:id" element={<ChatRoom />} />
             {/* Notifications */}
             <Route path="/notifications" element={<Notifications />} />
-            {/* Admin routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
+            {/* Admin — same auth page, role-based redirect handles it */}
+            <Route path="/admin/login" element={<Navigate to="/auth" replace />} />
             <Route path="/admin" element={<AdminDashboard />} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
