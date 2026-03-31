@@ -33,14 +33,22 @@ export default function AdminDashboard() {
   const [adjustDesc, setAdjustDesc] = useState('');
   const [adminNote, setAdminNote] = useState('');
 
+  // Redirect non-admin users
   useEffect(() => {
+    if (!authLoading && (!user || role !== 'admin')) {
+      navigate('/admin/login', { replace: true });
+    }
+  }, [authLoading, user, role, navigate]);
+
+  useEffect(() => {
+    if (authLoading || role !== 'admin') return;
     fetchDrivers();
     fetchDeliveries();
     fetchStores();
     fetchPayoutMethods();
     fetchReports();
     fetchCancellations();
-  }, []);
+  }, [authLoading, role]);
 
   const fetchDrivers = async () => {
     const { data } = await supabase.from('driver_profiles').select('*').order('created_at', { ascending: false });
