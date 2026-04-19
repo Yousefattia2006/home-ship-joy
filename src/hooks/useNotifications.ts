@@ -35,8 +35,8 @@ export async function sendNotification(
     body,
     type,
     delivery_id: deliveryId || null,
-    data: data || null,
   });
+  void data;
 
   await callSendPush(userId, title, body, type, deliveryId);
 }
