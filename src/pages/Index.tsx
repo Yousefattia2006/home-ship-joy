@@ -1,22 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import SplashScreen from './SplashScreen';
 
 const Index = () => {
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
-  const [showSplash, setShowSplash] = useState(true);
-  const [splashDone, setSplashDone] = useState(false);
-
-  const handleSplashComplete = useCallback(() => {
-    setSplashDone(true);
-    setShowSplash(false);
-  }, []);
 
   useEffect(() => {
-    if (!splashDone || loading) return;
+    if (loading) return;
 
     // No active session → go straight to unified auth (signup/login)
     if (!user) {
@@ -56,11 +48,7 @@ const Index = () => {
       case 'admin': navigate('/admin', { replace: true }); break;
       default: navigate('/auth', { replace: true });
     }
-  }, [user, role, loading, navigate, splashDone]);
-
-  if (showSplash) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
-  }
+  }, [user, role, loading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

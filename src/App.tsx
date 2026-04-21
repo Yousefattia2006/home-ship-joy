@@ -5,9 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import Index from "./pages/Index";
-import RoleSelection from "./pages/RoleSelection";
-import StoreSetup from "./pages/StoreSetup";
-import DriverSetup from "./pages/DriverSetup";
 import StoreDashboard from "./pages/store/StoreDashboard";
 import CreateDelivery from "./pages/store/CreateDelivery";
 import TrackDelivery from "./pages/store/TrackDelivery";
@@ -47,9 +44,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/verify" element={<VerifyOTP />} />
-            <Route path="/welcome" element={<RoleSelection />} />
-            <Route path="/welcome/store" element={<StoreSetup />} />
-            <Route path="/welcome/driver" element={<DriverSetup />} />
+            <Route path="/welcome" element={<Navigate to="/auth" replace />} />
             {/* Store routes */}
             <Route path="/store" element={<StoreDashboard />} />
             <Route path="/store/create" element={<CreateDelivery />} />
