@@ -59,19 +59,22 @@ export default function Auth() {
           throw new Error('Signup failed — please try again.');
         }
 
-        // Send OTP before navigating so the call isn't cancelled
-        const { data: otpData, error: otpError } = await supabase.functions.invoke('send-otp', {
+        // Fire OTP send with a timeout so signup never hangs
+        const otpPromise = supabase.functions.invoke('send-otp', {
           body: { action: 'send', user_id: userId, email },
         });
-
-        if (otpError || otpData?.error) {
-          console.warn('send-otp issue:', otpError || otpData?.error);
+        const timeout = new Promise((resolve) => setTimeout(() => resolve({ timedOut: true }), 5000));
+        const result: any = await Promise.race([otpPromise, timeout]);
+        if (result?.timedOut) {
+          console.warn('send-otp timed out — proceeding to verify screen anyway');
+        } else if (result?.error || result?.data?.error) {
+          console.warn('send-otp issue:', result.error || result.data?.error);
         }
 
         // Sign out so unverified user can't access protected routes
         await supabase.auth.signOut().catch(() => {});
 
-        navigate('/verify', { state: { email, password, userId, role: selectedRole } });
+        navigate('/verify', { state: { email, password, userId, role: selectedRole }, replace: true });
       }
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong');
