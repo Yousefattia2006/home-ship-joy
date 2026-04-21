@@ -18,9 +18,9 @@ const Index = () => {
   useEffect(() => {
     if (!splashDone || loading) return;
 
-    // No active session → new user, show role selection
+    // No active session → go straight to unified auth (signup/login)
     if (!user) {
-      navigate('/welcome', { replace: true });
+      navigate('/auth', { replace: true });
       return;
     }
 
@@ -54,7 +54,7 @@ const Index = () => {
       case 'store': navigate('/store', { replace: true }); break;
       case 'driver': routeDriver(); break;
       case 'admin': navigate('/admin', { replace: true }); break;
-      default: navigate('/welcome', { replace: true });
+      default: navigate('/auth', { replace: true });
     }
   }, [user, role, loading, navigate, splashDone]);
 
