@@ -28,6 +28,7 @@ export default function VerifyOTP() {
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval>>();
+  const verifiedRef = useRef(false);
 
   useEffect(() => {
     if (!email || !userId) {
@@ -35,11 +36,15 @@ export default function VerifyOTP() {
     }
   }, [email, userId, navigate]);
 
+  // If user abandons verification (driver role), wipe the half-created account
   useEffect(() => {
     return () => {
       if (cooldownRef.current) clearInterval(cooldownRef.current);
+      if (!verifiedRef.current && userId && role === 'driver') {
+        supabase.functions.invoke('delete-incomplete-driver', { body: { user_id: userId } }).catch(() => {});
+      }
     };
-  }, []);
+  }, [userId, role]);
 
   const startCooldown = () => {
     setCooldown(30);
@@ -75,6 +80,7 @@ export default function VerifyOTP() {
         return;
       }
 
+      verifiedRef.current = true;
       toast.success(t.verify.success);
 
       // Re-sign in so the session is active for subsequent pages
