@@ -53,13 +53,30 @@ export default function Auth() {
         }
         navigate('/', { replace: true });
       } else {
-        const data = await signUp(email, password, fullName, phone, selectedRole);
+        let data;
+        try {
+          data = await signUp(email, password, fullName, phone, selectedRole);
+        } catch (signupErr: any) {
+          const msg = (signupErr?.message || '').toLowerCase();
+          if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) {
+            const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+              redirectTo: `${window.location.origin}/auth`,
+            });
+            if (resetErr) {
+              toast.error(resetErr.message);
+            } else {
+              toast.success(`This email is already registered. We've sent a password reset link to ${email}.`);
+              setMode('login');
+            }
+            return;
+          }
+          throw signupErr;
+        }
         const userId = data.user?.id;
         if (!userId) {
           throw new Error('Signup failed — please try again.');
         }
 
-        // Fire OTP send with a timeout so signup never hangs
         const otpPromise = supabase.functions.invoke('send-otp', {
           body: { action: 'send', user_id: userId, email },
         });
@@ -71,7 +88,6 @@ export default function Auth() {
           console.warn('send-otp issue:', result.error || result.data?.error);
         }
 
-        // Sign out so unverified user can't access protected routes
         await supabase.auth.signOut().catch(() => {});
 
         navigate('/verify', { state: { email, password, userId, role: selectedRole }, replace: true });

@@ -149,29 +149,85 @@ export default function DriverOnboarding() {
     }
   };
 
+  const handleNativeSelfie = async () => {
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      if (!Capacitor.isNativePlatform()) {
+        // Web fallback: trigger hidden input
+        document.getElementById('selfie-web-input')?.click();
+        return;
+      }
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+      const photo = await Camera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        direction: 1 as any, // FRONT
+        saveToGallery: false,
+      });
+      if (photo.dataUrl) {
+        const res = await fetch(photo.dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], `selfie_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        handleFile('selfie', file);
+      }
+    } catch (err: any) {
+      console.error('Camera error:', err);
+      toast.error(err?.message || 'Could not open camera');
+    }
+  };
+
   const FileUploadBox = ({ label, fileKey, accept = 'image/*', captureOnly = false }: { label: string; fileKey: keyof FormData; accept?: string; captureOnly?: boolean }) => (
     <div className="space-y-2">
       <label className="text-sm font-medium text-foreground">{label}</label>
-      <label className={cn(
-        'flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
-        previews[fileKey] ? 'border-accent bg-accent/5' : 'border-border hover:border-muted-foreground'
-      )}>
-        {previews[fileKey] ? (
-          <img src={previews[fileKey]} alt="" className="h-full w-full object-contain rounded-xl p-1" />
-        ) : (
-          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-            {captureOnly ? <Camera className="w-8 h-8" /> : <Upload className="w-8 h-8" />}
-            <span className="text-xs">{captureOnly ? (t.driverOnboarding?.takeSelfie || 'Take Photo') : (t.driverOnboarding?.tapToUpload || 'Tap to upload')}</span>
-          </div>
-        )}
-        <input
-          type="file"
-          accept={accept}
-          capture={captureOnly ? 'user' : undefined}
-          className="hidden"
-          onChange={(e) => handleFile(fileKey, e.target.files?.[0] || null)}
-        />
-      </label>
+      {captureOnly ? (
+        <button
+          type="button"
+          onClick={handleNativeSelfie}
+          className={cn(
+            'flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
+            previews[fileKey] ? 'border-accent bg-accent/5' : 'border-border hover:border-muted-foreground'
+          )}
+        >
+          {previews[fileKey] ? (
+            <img src={previews[fileKey]} alt="" className="h-full w-full object-contain rounded-xl p-1" />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <Camera className="w-8 h-8" />
+              <span className="text-xs">{t.driverOnboarding?.takeSelfie || 'Take Photo'}</span>
+            </div>
+          )}
+          <input
+            id="selfie-web-input"
+            type="file"
+            accept={accept}
+            capture="user"
+            className="hidden"
+            onChange={(e) => handleFile(fileKey, e.target.files?.[0] || null)}
+          />
+        </button>
+      ) : (
+        <label className={cn(
+          'flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
+          previews[fileKey] ? 'border-accent bg-accent/5' : 'border-border hover:border-muted-foreground'
+        )}>
+          {previews[fileKey] ? (
+            <img src={previews[fileKey]} alt="" className="h-full w-full object-contain rounded-xl p-1" />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <Upload className="w-8 h-8" />
+              <span className="text-xs">{t.driverOnboarding?.tapToUpload || 'Tap to upload'}</span>
+            </div>
+          )}
+          <input
+            type="file"
+            accept={accept}
+            className="hidden"
+            onChange={(e) => handleFile(fileKey, e.target.files?.[0] || null)}
+          />
+        </label>
+      )}
       {form[fileKey] && (
         <div className="flex items-center gap-1 text-xs text-accent">
           <Check className="w-3 h-3" />
