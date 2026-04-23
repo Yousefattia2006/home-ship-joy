@@ -107,7 +107,8 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, phone: string, selectedRole: AppRole) => {
-    const { data, error } = await supabase.auth.signUp({
+    // Race against a hard timeout so the UI never hangs forever
+    const signUpPromise = supabase.auth.signUp({
       email,
       password,
       options: {
@@ -115,21 +116,27 @@ export function useAuth() {
         emailRedirectTo: window.location.origin,
       },
     });
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Signup timed out. Please check your connection and try again.')), 15000)
+    );
+
+    const { data, error } = await Promise.race([signUpPromise, timeoutPromise]) as Awaited<typeof signUpPromise>;
+
     if (error) throw error;
     if (!data.user) throw new Error('Signup failed');
 
     // Supabase returns empty identities when email already exists (to prevent enumeration)
     if (!data.user.identities || data.user.identities.length === 0) {
-      throw new Error('This email is already registered. Please log in instead.');
+      throw new Error('User already registered');
     }
 
     const userId = data.user.id;
 
-    // Fire-and-forget so signup flow isn't blocked when email verification returns no session.
+    // Fire-and-forget so signup flow isn't blocked.
     void (async () => {
       try {
         await supabase.from('user_roles').insert({ user_id: userId, role: selectedRole });
-
         if (selectedRole === 'store') {
           await supabase.from('store_profiles').insert({ user_id: userId, store_name: fullName, phone });
         } else if (selectedRole === 'driver') {

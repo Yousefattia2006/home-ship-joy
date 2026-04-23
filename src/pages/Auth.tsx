@@ -58,16 +58,18 @@ export default function Auth() {
           data = await signUp(email, password, fullName, phone, selectedRole);
         } catch (signupErr: any) {
           const msg = (signupErr?.message || '').toLowerCase();
-          if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) {
-            const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-              redirectTo: `${window.location.origin}/auth`,
-            });
-            if (resetErr) {
-              toast.error(resetErr.message);
-            } else {
-              toast.success(`This email is already registered. We've sent a password reset link to ${email}.`);
-              setMode('login');
-            }
+          if (
+            msg.includes('already registered') ||
+            msg.includes('already exists') ||
+            msg.includes('user already')
+          ) {
+            supabase.auth
+              .resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth` })
+              .catch(() => {});
+            toast.success(
+              `This email is already registered. We've sent a password reset link to ${email}.`
+            );
+            setMode('login');
             return;
           }
           throw signupErr;
@@ -77,20 +79,18 @@ export default function Auth() {
           throw new Error('Signup failed — please try again.');
         }
 
-        const otpPromise = supabase.functions.invoke('send-otp', {
-          body: { action: 'send', user_id: userId, email },
+        // Fire OTP send in background — don't block navigation
+        supabase.functions
+          .invoke('send-otp', { body: { action: 'send', user_id: userId, email } })
+          .catch((e) => console.warn('send-otp failed:', e));
+
+        // Sign out in background
+        supabase.auth.signOut().catch(() => {});
+
+        navigate('/verify', {
+          state: { email, password, userId, role: selectedRole },
+          replace: true,
         });
-        const timeout = new Promise((resolve) => setTimeout(() => resolve({ timedOut: true }), 5000));
-        const result: any = await Promise.race([otpPromise, timeout]);
-        if (result?.timedOut) {
-          console.warn('send-otp timed out — proceeding to verify screen anyway');
-        } else if (result?.error || result?.data?.error) {
-          console.warn('send-otp issue:', result.error || result.data?.error);
-        }
-
-        await supabase.auth.signOut().catch(() => {});
-
-        navigate('/verify', { state: { email, password, userId, role: selectedRole }, replace: true });
       }
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong');
