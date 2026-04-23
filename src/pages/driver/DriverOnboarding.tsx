@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,7 +52,51 @@ export default function DriverOnboarding() {
   const [form, setForm] = useState<FormData>(initialForm);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  
+  const submittedRef = useRef(false);
+
+  // Abandon = delete the auth user + driver profile so they can re-register.
+  const abandonAccount = async () => {
+    if (submittedRef.current) return;
+    let uid = user?.id;
+    if (!uid) {
+      const { data: { session } } = await supabase.auth.getSession();
+      uid = session?.user?.id;
+    }
+    if (!uid) return;
+    try {
+      // Use sendBeacon-like fire-and-forget; sign out locally first
+      await supabase.functions.invoke('delete-incomplete-driver', { body: { user_id: uid } });
+    } catch (e) {
+      console.warn('abandon cleanup failed', e);
+    }
+    await supabase.auth.signOut().catch(() => {});
+  };
+
+  // Cleanup on unmount (navigating away without submitting)
+  useEffect(() => {
+    const handleHide = () => {
+      if (!submittedRef.current) {
+        // best-effort beacon
+        const uid = user?.id;
+        if (uid) {
+          try {
+            navigator.sendBeacon?.(
+              `${(supabase as any).supabaseUrl}/functions/v1/delete-incomplete-driver`,
+              new Blob([JSON.stringify({ user_id: uid })], { type: 'application/json' })
+            );
+          } catch {}
+        }
+      }
+    };
+    window.addEventListener('pagehide', handleHide);
+    return () => {
+      window.removeEventListener('pagehide', handleHide);
+      if (!submittedRef.current) {
+        void abandonAccount();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const set = (key: keyof FormData, val: any) => setForm(prev => ({ ...prev, [key]: val }));
 
