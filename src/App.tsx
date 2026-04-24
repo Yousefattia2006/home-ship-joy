@@ -28,7 +28,6 @@ import ChatRoom from "./pages/ChatRoom";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
 import Auth from "./pages/Auth";
-import VerifyOTP from "./pages/VerifyOTP";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,7 +42,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/verify" element={<VerifyOTP />} />
+            <Route path="/verify" element={<Navigate to="/auth" replace />} />
             <Route path="/welcome" element={<Navigate to="/auth" replace />} />
             {/* Store routes */}
             <Route path="/store" element={<StoreDashboard />} />
