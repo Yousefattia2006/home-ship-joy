@@ -107,21 +107,14 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, phone: string, selectedRole: AppRole) => {
-    // Race against a hard timeout so the UI never hangs forever
-    const signUpPromise = supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName, phone, selected_role: selectedRole },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/`,
       },
     });
-
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Signup timed out. Please check your connection and try again.')), 15000)
-    );
-
-    const { data, error } = await Promise.race([signUpPromise, timeoutPromise]) as Awaited<typeof signUpPromise>;
 
     if (error) throw error;
     if (!data.user) throw new Error('Signup failed');
@@ -133,19 +126,22 @@ export function useAuth() {
 
     const userId = data.user.id;
 
-    // Fire-and-forget so signup flow isn't blocked.
-    void (async () => {
-      try {
-        await supabase.from('user_roles').insert({ user_id: userId, role: selectedRole });
-        if (selectedRole === 'store') {
-          await supabase.from('store_profiles').insert({ user_id: userId, store_name: fullName, phone });
-        } else if (selectedRole === 'driver') {
-          await supabase.from('driver_profiles').insert({ user_id: userId, full_name: fullName, phone });
-        }
-      } catch (profileErr) {
-        console.warn('Profile/role insert skipped until verified session:', profileErr);
+    // Insert role + profile. Try to await, but don't fail signup if RLS blocks
+    // until the session is fully active — those will be retried on first authed page.
+    try {
+      await supabase.from('user_roles').insert({ user_id: userId, role: selectedRole });
+    } catch (e) {
+      console.warn('[useAuth] user_roles insert deferred:', e);
+    }
+    try {
+      if (selectedRole === 'store') {
+        await supabase.from('store_profiles').insert({ user_id: userId, store_name: fullName, phone });
+      } else if (selectedRole === 'driver') {
+        await supabase.from('driver_profiles').insert({ user_id: userId, full_name: fullName, phone });
       }
-    })();
+    } catch (e) {
+      console.warn('[useAuth] profile insert deferred:', e);
+    }
 
     return data;
   };
