@@ -30,6 +30,7 @@ import ChatRoom from "./pages/ChatRoom";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/verify" element={<Navigate to="/auth" replace />} />
             <Route path="/welcome" element={<Navigate to="/auth" replace />} />
             {/* Store routes */}
