@@ -97,15 +97,20 @@ export default function Auth() {
 
           if (!userId) throw new Error("Signup failed — please try again.");
 
+          // Persist verification context so a refresh / app-close keeps the gate in place
+          localStorage.setItem(
+            "pending_verification",
+            JSON.stringify({ user_id: userId, email: email.trim().toLowerCase(), role: selectedRole }),
+          );
+
           toast.success("Account created! Check your email for a verification code.");
 
-          // Fire-and-forget welcome verification email (does not block routing)
+          // Fire-and-forget welcome verification email (Verify page will also send one on mount)
           supabase.functions.invoke("send-otp", {
             body: { action: "send", user_id: userId, email: email.trim().toLowerCase() },
           }).catch((e) => console.warn("[Auth] send-otp failed", e));
 
-          await new Promise((r) => setTimeout(r, 400));
-          await routeAfterAuth(userId, selectedRole);
+          navigate(`/verify?user_id=${encodeURIComponent(userId)}&email=${encodeURIComponent(email.trim().toLowerCase())}`, { replace: true });
         } catch (signupErr: any) {
           const msg = (signupErr?.message || "").toLowerCase();
 
@@ -134,7 +139,7 @@ export default function Auth() {
     <div className={cn("min-h-[100dvh] bg-background flex flex-col", isRTL && "rtl")} dir={isRTL ? "rtl" : "ltr"}>
       <div className="flex items-center justify-between px-4 pt-20">
         <LanguageToggle />
-        <h1 className="text-lg font-bold text-foreground font-['Inter']">Tawseel</h1>
+        <h1 className="text-lg font-bold text-foreground font-['Inter']">{t.app.name}</h1>
         <div className="w-10" />
       </div>
 

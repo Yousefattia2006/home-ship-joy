@@ -53,7 +53,7 @@ export default function StoreDashboard() {
   return (
     <div className="min-h-screen bg-background pb-20 safe-top">
       <div className="px-5 pt-6 pb-3 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">توصيل</h1>
+        <h1 className="text-2xl font-bold">{t.app.name}</h1>
         <NotificationBell />
       </div>
 

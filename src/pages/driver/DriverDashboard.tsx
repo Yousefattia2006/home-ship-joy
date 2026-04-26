@@ -316,7 +316,7 @@ export default function DriverDashboard() {
     <div className="min-h-screen bg-background pb-20 safe-top flex flex-col">
       <div className="px-5 pt-6 pb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">توصيل</h1>
+          <h1 className="text-2xl font-bold">{t.app.name}</h1>
           <p className={cn('text-xs font-semibold', statusColors[driverStatus])}>
             {statusLabels[driverStatus]}
           </p>
