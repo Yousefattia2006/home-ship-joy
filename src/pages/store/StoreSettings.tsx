@@ -58,7 +58,14 @@ export default function StoreSettings() {
         </div>
 
         <div className="pt-4">
-          <Button variant="outline" onClick={signOut} className="w-full h-12 font-medium rounded-xl gap-2 text-destructive">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await signOut();
+              navigate('/auth', { replace: true });
+            }}
+            className="w-full h-12 font-medium rounded-xl gap-2 text-destructive"
+          >
             <LogOut className="w-4 h-4" />
             {t.common.signOut}
           </Button>

@@ -21,38 +21,27 @@ export function useAuth() {
 
     const fetchRole = async (userId: string): Promise<AppRole | null> => {
       try {
-        const roleChecks: AppRole[] = ['admin', 'driver', 'store'];
+        // Query user_roles directly in a single round-trip
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId);
 
-        for (const candidate of roleChecks) {
-          const { data, error } = await supabase.rpc('has_role', {
-            _user_id: userId,
-            _role: candidate,
-          });
-
-          if (!error && data) {
-            return candidate;
-          }
+        if (!error && data && data.length > 0) {
+          const roles = data.map((r: any) => r.role as AppRole);
+          if (roles.includes('admin')) return 'admin';
+          if (roles.includes('driver')) return 'driver';
+          if (roles.includes('store')) return 'store';
         }
 
-        const { data: storeProfile, error: storeError } = await supabase
-          .from('store_profiles')
-          .select('user_id')
-          .eq('user_id', userId)
-          .maybeSingle();
+        // Fallback: check profile tables in parallel
+        const [storeRes, driverRes] = await Promise.all([
+          supabase.from('store_profiles').select('user_id').eq('user_id', userId).maybeSingle(),
+          supabase.from('driver_profiles').select('user_id').eq('user_id', userId).maybeSingle(),
+        ]);
 
-        if (!storeError && storeProfile) {
-          return 'store';
-        }
-
-        const { data: driverProfile, error: driverError } = await supabase
-          .from('driver_profiles')
-          .select('user_id')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (!driverError && driverProfile) {
-          return 'driver';
-        }
+        if (storeRes.data) return 'store';
+        if (driverRes.data) return 'driver';
 
         return null;
       } catch {
@@ -126,9 +115,14 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('[useAuth] signOut error', e);
+    }
     setUser(null);
     setRole(null);
+    window.location.href = '/auth';
   };
 
   return { user, role, loading, signUp, signIn, signOut };
