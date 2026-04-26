@@ -25,10 +25,32 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const { action, user_id, email, otp } = await req.json();
+    const body = await req.json();
+    const { action, email, otp } = body;
+    let { user_id } = body;
+
+    // Convenience: look up user_id by email (used by forgot-password and post-signup verification)
+    if (action === 'send_by_email') {
+      if (!email) {
+        return new Response(JSON.stringify({ error: 'email required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: foundId, error: lookupErr } = await supabase.rpc('get_user_id_by_email', {
+        _email: String(email).trim().toLowerCase(),
+      });
+      if (lookupErr || !foundId) {
+        return new Response(JSON.stringify({ error: 'no_account' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      user_id = foundId;
+    }
 
     // ── SEND OTP ──
-    if (action === 'send') {
+    if (action === 'send' || action === 'send_by_email') {
       if (!user_id || !email) {
         return new Response(JSON.stringify({ error: 'user_id and email required' }), {
           status: 400,
