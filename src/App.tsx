@@ -31,7 +31,9 @@ import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
+import Verify from "./pages/Verify";
 import NotFound from "./pages/NotFound";
+import RequireVerified from "./components/RequireVerified";
 
 const queryClient = new QueryClient();
 
@@ -58,36 +60,36 @@ const App = () => {
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/verify" element={<Navigate to="/auth" replace />} />
+            <Route path="/verify" element={<Verify />} />
             <Route path="/welcome" element={<Navigate to="/auth" replace />} />
             {/* Store routes */}
-            <Route path="/store" element={<StoreDashboard />} />
-            <Route path="/store/create" element={<CreateDelivery />} />
-            <Route path="/store/track/:id" element={<TrackDelivery />} />
-            <Route path="/store/deliveries" element={<StoreDeliveries />} />
-            <Route path="/store/settings" element={<StoreSettings />} />
-            <Route path="/store/settings/info" element={<StoreSettingsInfo />} />
-            <Route path="/store/settings/payment" element={<StoreSettingsPayment />} />
-            <Route path="/store/settings/terms" element={<StoreTerms />} />
-            <Route path="/store/settings/contact" element={<StoreContact />} />
+            <Route path="/store" element={<RequireVerified><StoreDashboard /></RequireVerified>} />
+            <Route path="/store/create" element={<RequireVerified><CreateDelivery /></RequireVerified>} />
+            <Route path="/store/track/:id" element={<RequireVerified><TrackDelivery /></RequireVerified>} />
+            <Route path="/store/deliveries" element={<RequireVerified><StoreDeliveries /></RequireVerified>} />
+            <Route path="/store/settings" element={<RequireVerified><StoreSettings /></RequireVerified>} />
+            <Route path="/store/settings/info" element={<RequireVerified><StoreSettingsInfo /></RequireVerified>} />
+            <Route path="/store/settings/payment" element={<RequireVerified><StoreSettingsPayment /></RequireVerified>} />
+            <Route path="/store/settings/terms" element={<RequireVerified><StoreTerms /></RequireVerified>} />
+            <Route path="/store/settings/contact" element={<RequireVerified><StoreContact /></RequireVerified>} />
             {/* Driver routes */}
-            <Route path="/driver" element={<DriverDashboard />} />
-            <Route path="/driver/onboarding" element={<DriverOnboarding />} />
-            <Route path="/driver/status" element={<DriverApprovalStatus />} />
-            <Route path="/driver/congrats" element={<DriverCongrats />} />
-            <Route path="/driver/payout" element={<DriverPayoutSetup />} />
-            <Route path="/driver/payments" element={<DriverPayments />} />
-            <Route path="/driver/settings" element={<DriverSettings />} />
-            <Route path="/driver/settings/info" element={<DriverSettingsInfo />} />
-            <Route path="/driver/settings/terms" element={<DriverTerms />} />
+            <Route path="/driver" element={<RequireVerified><DriverDashboard /></RequireVerified>} />
+            <Route path="/driver/onboarding" element={<RequireVerified><DriverOnboarding /></RequireVerified>} />
+            <Route path="/driver/status" element={<RequireVerified><DriverApprovalStatus /></RequireVerified>} />
+            <Route path="/driver/congrats" element={<RequireVerified><DriverCongrats /></RequireVerified>} />
+            <Route path="/driver/payout" element={<RequireVerified><DriverPayoutSetup /></RequireVerified>} />
+            <Route path="/driver/payments" element={<RequireVerified><DriverPayments /></RequireVerified>} />
+            <Route path="/driver/settings" element={<RequireVerified><DriverSettings /></RequireVerified>} />
+            <Route path="/driver/settings/info" element={<RequireVerified><DriverSettingsInfo /></RequireVerified>} />
+            <Route path="/driver/settings/terms" element={<RequireVerified><DriverTerms /></RequireVerified>} />
             {/* Messaging */}
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/messages/:id" element={<ChatRoom />} />
+            <Route path="/messages" element={<RequireVerified><Messages /></RequireVerified>} />
+            <Route path="/messages/:id" element={<RequireVerified><ChatRoom /></RequireVerified>} />
             {/* Notifications */}
-            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/notifications" element={<RequireVerified><Notifications /></RequireVerified>} />
             {/* Admin — same auth page, role-based redirect handles it */}
             <Route path="/admin/login" element={<Navigate to="/auth" replace />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={<RequireVerified><AdminDashboard /></RequireVerified>} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
