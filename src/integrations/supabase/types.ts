@@ -807,7 +807,49 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_drivers: {
+        Row: {
+          approval_status: Database["public"]["Enums"]["approval_status"] | null
+          current_lat: number | null
+          current_lng: number | null
+          full_name: string | null
+          is_online: boolean | null
+          last_active_at: string | null
+          plate_number: string | null
+          rating: number | null
+          user_id: string | null
+          vehicle_type: Database["public"]["Enums"]["vehicle_type"] | null
+        }
+        Insert: {
+          approval_status?:
+            | Database["public"]["Enums"]["approval_status"]
+            | null
+          current_lat?: number | null
+          current_lng?: number | null
+          full_name?: string | null
+          is_online?: boolean | null
+          last_active_at?: string | null
+          plate_number?: string | null
+          rating?: number | null
+          user_id?: string | null
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
+        }
+        Update: {
+          approval_status?:
+            | Database["public"]["Enums"]["approval_status"]
+            | null
+          current_lat?: number | null
+          current_lng?: number | null
+          full_name?: string | null
+          is_online?: boolean | null
+          last_active_at?: string | null
+          plate_number?: string | null
+          rating?: number | null
+          user_id?: string | null
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
