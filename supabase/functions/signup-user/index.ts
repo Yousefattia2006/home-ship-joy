@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
         admin.from('email_otps').delete().eq('user_id', userId),
       ]);
 
-      const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+      const { error: deleteError } = await admin.auth.admin.deleteUser(userId!);
       if (deleteError) throw deleteError;
     }
 
