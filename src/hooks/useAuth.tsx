@@ -107,43 +107,16 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, phone: string, selectedRole: AppRole) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, phone, selected_role: selectedRole },
-        emailRedirectTo: `${window.location.origin}/`,
-      },
+    const { data, error } = await supabase.functions.invoke('signup-user', {
+      body: { email, password, fullName, phone, role: selectedRole },
     });
 
-    if (error) throw error;
-    if (!data.user) throw new Error('Signup failed');
+    if (error) throw new Error(error.message || 'Signup failed');
+    if (data?.error) throw new Error(data.error);
 
-    // Supabase returns empty identities when email already exists (to prevent enumeration)
-    if (!data.user.identities || data.user.identities.length === 0) {
-      throw new Error('User already registered');
-    }
-
-    const userId = data.user.id;
-
-    // Insert role + profile. Try to await, but don't fail signup if RLS blocks
-    // until the session is fully active — those will be retried on first authed page.
-    try {
-      await supabase.from('user_roles').insert({ user_id: userId, role: selectedRole });
-    } catch (e) {
-      console.warn('[useAuth] user_roles insert deferred:', e);
-    }
-    try {
-      if (selectedRole === 'store') {
-        await supabase.from('store_profiles').insert({ user_id: userId, store_name: fullName, phone });
-      } else if (selectedRole === 'driver') {
-        await supabase.from('driver_profiles').insert({ user_id: userId, full_name: fullName, phone });
-      }
-    } catch (e) {
-      console.warn('[useAuth] profile insert deferred:', e);
-    }
-
-    return data;
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) throw signInError;
+    return signInData;
   };
 
   const signIn = async (email: string, password: string) => {

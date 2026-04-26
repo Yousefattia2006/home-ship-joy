@@ -103,8 +103,8 @@ export default function Auth() {
         } catch (signupErr: any) {
           const msg = (signupErr?.message || "").toLowerCase();
 
-          if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already")) {
-            toast.error("This email is already registered. Please sign in instead.");
+          if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already") || msg.includes("user_already_exists")) {
+            toast.error("This email is already registered. If you forgot the password, use password reset.");
             setMode("login");
             return;
           }
@@ -113,7 +113,10 @@ export default function Auth() {
         }
       }
     } catch (err: any) {
-      const msg = err?.message || "Something went wrong. Please try again.";
+      let msg = err?.message || "Something went wrong. Please try again.";
+      if (String(msg).toLowerCase().includes("invalid login credentials")) {
+        msg = "Wrong email or password. If this account was removed, please sign up again.";
+      }
       toast.error(msg);
       console.error("[Auth] error:", err);
     } finally {
