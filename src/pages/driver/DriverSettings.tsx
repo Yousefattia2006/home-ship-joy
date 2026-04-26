@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { BottomNav, driverNavItems } from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { User, CreditCard, FileText, Globe, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 
 export default function DriverSettings() {
   const { t, lang, setLang, dir } = useLanguage();
@@ -61,6 +62,10 @@ export default function DriverSettings() {
             <LogOut className="w-4 h-4" />
             {t.common.signOut}
           </Button>
+        </div>
+
+        <div className="pt-2">
+          <DeleteAccountButton />
         </div>
       </div>
 

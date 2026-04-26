@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Loader2, Store, Bike } from "lucide-react";
+import { Loader2, Store, Bike, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Mode = "login" | "signup";
@@ -27,6 +27,7 @@ export default function Auth() {
   const [phone, setPhone] = useState("");
   const [selectedRole, setSelectedRole] = useState<"store" | "driver">("store");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const routeAfterAuth = async (userId: string, fallbackRole?: "store" | "driver") => {
     let resolvedRole: "store" | "driver" | "admin" | null = null;
@@ -96,9 +97,14 @@ export default function Auth() {
 
           if (!userId) throw new Error("Signup failed — please try again.");
 
-          toast.success("Account created!");
+          toast.success("Account created! Check your email for a verification code.");
 
-          await new Promise((r) => setTimeout(r, 600));
+          // Fire-and-forget welcome verification email (does not block routing)
+          supabase.functions.invoke("send-otp", {
+            body: { action: "send", user_id: userId, email: email.trim().toLowerCase() },
+          }).catch((e) => console.warn("[Auth] send-otp failed", e));
+
+          await new Promise((r) => setTimeout(r, 400));
           await routeAfterAuth(userId, selectedRole);
         } catch (signupErr: any) {
           const msg = (signupErr?.message || "").toLowerCase();
@@ -250,16 +256,35 @@ export default function Auth() {
               <Label htmlFor="password" className="text-sm font-medium">
                 {t.auth.password}
               </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                className="h-12 rounded-xl bg-secondary border-0 text-base"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  className="h-12 rounded-xl bg-secondary border-0 text-base pe-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {mode === "login" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-xs text-accent font-semibold mt-1"
+                >
+                  {t.auth.forgotPassword}
+                </button>
+              )}
             </div>
 
             <Button type="submit" disabled={loading} className="w-full h-12 text-base font-bold rounded-xl">
