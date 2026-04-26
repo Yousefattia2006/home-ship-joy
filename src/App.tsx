@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import SplashScreen from "@/components/SplashScreen";
 import Index from "./pages/Index";
 import StoreDashboard from "./pages/store/StoreDashboard";
 import CreateDelivery from "./pages/store/CreateDelivery";
@@ -32,10 +34,22 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !sessionStorage.getItem("splash_shown");
+  });
+
+  const handleSplashFinish = () => {
+    sessionStorage.setItem("splash_shown", "1");
+    setShowSplash(false);
+  };
+
+  return (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <TooltipProvider>
+        {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -79,6 +93,7 @@ const App = () => (
       </TooltipProvider>
     </LanguageProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
