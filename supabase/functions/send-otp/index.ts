@@ -121,12 +121,9 @@ Deno.serve(async (req) => {
         });
       }
 
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({ success: true, user_id }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    }
-
-    // ── VERIFY OTP ──
     if (action === 'verify') {
       if (!user_id || !otp) {
         return new Response(JSON.stringify({ error: 'user_id and otp required' }), {
