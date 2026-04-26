@@ -115,9 +115,14 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('[useAuth] signOut error', e);
+    }
     setUser(null);
     setRole(null);
+    window.location.href = '/auth';
   };
 
   return { user, role, loading, signUp, signIn, signOut };
