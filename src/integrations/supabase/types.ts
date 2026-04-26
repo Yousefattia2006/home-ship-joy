@@ -503,6 +503,33 @@ export type Database = {
         }
         Relationships: []
       }
+      email_otps: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_verified: boolean | null
+          otp_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_verified?: boolean | null
+          otp_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_verified?: boolean | null
+          otp_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string
@@ -608,6 +635,36 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          platform: string | null
+          role: string | null
+          token: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string | null
+          role?: string | null
+          token?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string | null
+          role?: string | null
+          token?: string | null
           user_id?: string
         }
         Relationships: []
