@@ -115,14 +115,24 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    // Clear local state immediately so UI doesn't hang waiting for the network
+    setUser(null);
+    setRole(null);
     try {
-      await supabase.auth.signOut();
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
     } catch (e) {
       console.warn('[useAuth] signOut error', e);
     }
-    setUser(null);
-    setRole(null);
-    window.location.href = '/auth';
+    // Best-effort: nuke any leftover supabase keys in localStorage
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('sb-') || k.includes('supabase'))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    window.location.replace('/auth');
   };
 
   return { user, role, loading, signUp, signIn, signOut };
