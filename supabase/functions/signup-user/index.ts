@@ -43,18 +43,11 @@ Deno.serve(async (req) => {
 
     const { email, password, fullName, phone, role } = validate(await req.json());
 
-    let userId: string | null = null;
-    let existingUser: any = null;
+    // Fast lookup via SECURITY DEFINER RPC instead of paginating listUsers (huge speed win).
+    const { data: existingUserId } = await admin.rpc('get_user_id_by_email', { _email: email });
+    let userId: string | null = existingUserId ?? null;
 
-    for (let page = 1; page <= 20 && !existingUser; page++) {
-      const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-      if (error) throw error;
-      existingUser = data.users.find((u) => u.email?.toLowerCase() === email) ?? null;
-      if (data.users.length < 1000) break;
-    }
-
-    if (existingUser) {
-      userId = existingUser.id;
+    if (userId) {
       const [{ data: roles }, { data: storeProfile }, { data: driverProfile }] = await Promise.all([
         admin.from('user_roles').select('role').eq('user_id', userId),
         admin.from('store_profiles').select('id').eq('user_id', userId).maybeSingle(),
