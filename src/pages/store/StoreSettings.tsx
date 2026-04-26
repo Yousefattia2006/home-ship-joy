@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { BottomNav, storeNavItems } from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Store, CreditCard, FileText, Mail, Globe, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 
 export default function StoreSettings() {
   const { t, lang, setLang, dir } = useLanguage();
@@ -60,15 +61,16 @@ export default function StoreSettings() {
         <div className="pt-4">
           <Button
             variant="outline"
-            onClick={async () => {
-              await signOut();
-              navigate('/auth', { replace: true });
-            }}
+            onClick={() => signOut()}
             className="w-full h-12 font-medium rounded-xl gap-2 text-destructive"
           >
             <LogOut className="w-4 h-4" />
             {t.common.signOut}
           </Button>
+        </div>
+
+        <div className="pt-2">
+          <DeleteAccountButton />
         </div>
       </div>
 
