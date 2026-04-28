@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_broadcasts: {
+        Row: {
+          audience: string
+          body: string
+          created_at: string
+          created_by: string
+          error: string | null
+          id: string
+          recipients_count: number
+          send_at: string | null
+          sent_at: string | null
+          status: string
+          target_user_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          body: string
+          created_at?: string
+          created_by: string
+          error?: string | null
+          id?: string
+          recipients_count?: number
+          send_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_user_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          body?: string
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          id?: string
+          recipients_count?: number
+          send_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_user_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cancellations: {
         Row: {
           cancelled_by: string
