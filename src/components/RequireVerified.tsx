@@ -37,9 +37,14 @@ export default function RequireVerified({ children }: Props) {
 
     (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("send-otp", {
-          body: { action: "check", user_id: user.id },
-        });
+        const { data, error } = await Promise.race([
+          supabase.functions.invoke("send-otp", {
+            body: { action: "check", user_id: user.id },
+          }),
+          new Promise<{ data: null; error: Error }>((resolve) =>
+            window.setTimeout(() => resolve({ data: null, error: new Error("verification_check_timeout") }), 5000),
+          ),
+        ]);
         if (!alive) return;
         if (error) {
           // Be safe: treat as unverified

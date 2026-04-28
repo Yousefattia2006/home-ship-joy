@@ -21,20 +21,16 @@ export function useAuth() {
 
     const fetchRole = async (userId: string): Promise<AppRole | null> => {
       try {
-        // Query user_roles directly in a single round-trip
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId);
-
-        if (!error && data && data.length > 0) {
-          const roles = data.map((r: any) => r.role as AppRole);
-          if (roles.includes('admin')) return 'admin';
-          if (roles.includes('driver')) return 'driver';
-          if (roles.includes('store')) return 'store';
+        // Use the SECURITY DEFINER RPC so role checks do not depend on client-side RLS reads.
+        for (const candidate of ['admin', 'driver', 'store'] as const) {
+          const { data } = await supabase.rpc('has_role', {
+            _user_id: userId,
+            _role: candidate,
+          });
+          if (data) return candidate;
         }
 
-        // Fallback: check profile tables in parallel
+        // Fallback for old accounts if role rows are missing.
         const [storeRes, driverRes] = await Promise.all([
           supabase.from('store_profiles').select('user_id').eq('user_id', userId).maybeSingle(),
           supabase.from('driver_profiles').select('user_id').eq('user_id', userId).maybeSingle(),
