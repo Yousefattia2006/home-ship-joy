@@ -14,7 +14,7 @@ interface Props {
  * Routes to /auth if not signed in at all.
  */
 export default function RequireVerified({ children }: Props) {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const [checking, setChecking] = useState(true);
   const [verified, setVerified] = useState<boolean | null>(null);
   const location = useLocation();
@@ -25,6 +25,13 @@ export default function RequireVerified({ children }: Props) {
     if (!user) {
       setChecking(false);
       setVerified(null);
+      return;
+    }
+
+    // Admins bypass the email-OTP verification gate (they're provisioned server-side).
+    if (role === 'admin') {
+      setVerified(true);
+      setChecking(false);
       return;
     }
 
