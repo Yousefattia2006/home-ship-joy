@@ -29,16 +29,29 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const withTimeout = async <T,>(p: PromiseLike<T>, ms: number): Promise<T | null> => {
+    let timer: number | undefined;
+    try {
+      return await Promise.race<T | null>([
+        Promise.resolve(p) as Promise<T>,
+        new Promise<null>((resolve) => {
+          timer = window.setTimeout(() => resolve(null), ms);
+        }),
+      ]);
+    } finally {
+      if (timer) window.clearTimeout(timer);
+    }
+  };
+
   const routeAfterAuth = async (userId: string, fallbackRole?: "store" | "driver") => {
     let resolvedRole: "store" | "driver" | "admin" | null = null;
 
     for (const candidate of ["admin", "driver", "store"] as const) {
-      const { data } = await supabase.rpc("has_role", {
-        _user_id: userId,
-        _role: candidate,
-      });
-
-      if (data) {
+      const res = await withTimeout(
+        supabase.rpc("has_role", { _user_id: userId, _role: candidate }),
+        5000
+      );
+      if (res?.data) {
         resolvedRole = candidate;
         break;
       }
@@ -50,11 +63,15 @@ export default function Auth() {
     if (resolvedRole === "store") return navigate("/store", { replace: true });
 
     if (resolvedRole === "driver") {
-      const { data: profile } = await supabase
-        .from("driver_profiles")
-        .select("onboarding_completed, approval_status")
-        .eq("user_id", userId)
-        .maybeSingle();
+      const res = await withTimeout(
+        supabase
+          .from("driver_profiles")
+          .select("onboarding_completed, approval_status")
+          .eq("user_id", userId)
+          .maybeSingle(),
+        5000
+      );
+      const profile = res?.data;
 
       if (!profile || !profile.onboarding_completed) {
         return navigate("/driver/onboarding", { replace: true });
