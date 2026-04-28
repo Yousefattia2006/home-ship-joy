@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import splashVideo from "@/assets/splash.mp4";
 
 interface SplashScreenProps {
@@ -6,15 +6,13 @@ interface SplashScreenProps {
   maxDurationMs?: number;
 }
 
-const SplashScreen = ({ onFinish, maxDurationMs = 6000 }: SplashScreenProps) => {
+const SplashScreen = ({ onFinish, maxDurationMs = 8000 }: SplashScreenProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [done, setDone] = useState(false);
   const doneRef = useRef(false);
 
   const finish = () => {
     if (doneRef.current) return;
     doneRef.current = true;
-    setDone(true);
     onFinish();
   };
 
@@ -25,30 +23,36 @@ const SplashScreen = ({ onFinish, maxDurationMs = 6000 }: SplashScreenProps) => 
       return () => clearTimeout(t);
     }
 
+    // Required for autoplay on mobile/most browsers
     v.muted = true;
+    v.defaultMuted = true;
     (v as any).playsInline = true;
+    v.setAttribute("playsinline", "true");
+    v.setAttribute("webkit-playsinline", "true");
 
-    const tryPlay = () => v.play().catch(() => {});
+    const tryPlay = () => {
+      const p = v.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    };
+
     tryPlay();
+    const retry1 = setTimeout(tryPlay, 100);
+    const retry2 = setTimeout(tryPlay, 400);
 
-    // Retry once more shortly after mount (handles iOS first-open hiccup)
-    const retry = setTimeout(tryPlay, 250);
-
-    // If video never starts, finish anyway after maxDuration
+    // Hard cap so user is never stuck on splash
     const timeout = setTimeout(finish, maxDurationMs);
 
-    // Tap anywhere to skip / unblock autoplay
-    const onTap = () => {
-      tryPlay();
-    };
-    window.addEventListener('touchstart', onTap, { once: true, passive: true });
-    window.addEventListener('click', onTap, { once: true });
+    // Tap anywhere unblocks autoplay if needed
+    const onTap = () => tryPlay();
+    window.addEventListener("touchstart", onTap, { once: true, passive: true });
+    window.addEventListener("click", onTap, { once: true });
 
     return () => {
       clearTimeout(timeout);
-      clearTimeout(retry);
-      window.removeEventListener('touchstart', onTap);
-      window.removeEventListener('click', onTap);
+      clearTimeout(retry1);
+      clearTimeout(retry2);
+      window.removeEventListener("touchstart", onTap);
+      window.removeEventListener("click", onTap);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
