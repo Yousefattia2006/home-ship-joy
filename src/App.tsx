@@ -38,13 +38,9 @@ import RequireVerified from "./components/RequireVerified";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !sessionStorage.getItem("splash_shown");
-  });
+  const [showSplash, setShowSplash] = useState(true);
 
   const handleSplashFinish = () => {
-    sessionStorage.setItem("splash_shown", "1");
     setShowSplash(false);
   };
 
