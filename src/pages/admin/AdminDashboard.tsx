@@ -49,7 +49,7 @@ export default function AdminDashboard() {
     }
 
     // Once auth has finished loading, any non-admin or unresolved role should not keep this page spinning.
-    if (role !== 'admin') {
+    if (role === null || role === 'store' || role === 'driver') {
       navigate('/admin/login', { replace: true });
     }
   }, [authLoading, user, role, navigate]);
