@@ -142,8 +142,13 @@ export default function Auth() {
       }
     } catch (err: any) {
       let msg = err?.message || "Something went wrong. Please try again.";
-      if (String(msg).toLowerCase().includes("invalid login credentials")) {
+      const normalized = String(msg).toLowerCase();
+      if (normalized.includes("invalid login credentials")) {
         msg = "Wrong email or password. If this account was removed, please sign up again.";
+      } else if (normalized.includes("failed to send a request") || normalized.includes("edge function returned a non-2xx")) {
+        msg = "Could not reach the account service. Please try again in a moment.";
+      } else if (normalized.includes("user_already_exists")) {
+        msg = "This email is already registered. Please sign in or reset your password.";
       }
       toast.error(msg);
       console.error("[Auth] error:", err);
