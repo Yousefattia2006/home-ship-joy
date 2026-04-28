@@ -38,7 +38,7 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
+        supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password }),
         10000,
         'Login took too long. Please try again.'
       );
@@ -64,7 +64,12 @@ export default function AdminLogin() {
 
       navigate('/admin', { replace: true });
     } catch (err: any) {
-      toast.error(err.message || 'Something went wrong');
+      const message = String(err?.message || 'Something went wrong');
+      toast.error(
+        message.toLowerCase().includes('invalid login credentials')
+          ? 'Wrong email or password. Please check the admin credentials and try again.'
+          : message
+      );
     } finally {
       setLoading(false);
     }

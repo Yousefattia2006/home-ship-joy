@@ -4,6 +4,27 @@ import type { User } from '@supabase/supabase-js';
 
 export type AppRole = 'store' | 'driver' | 'admin';
 
+const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, message: string): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
+
+const getFunctionErrorMessage = async (error: any, fallback: string) => {
+  try {
+    const body = await error?.context?.json?.();
+    if (body?.error) return String(body.error);
+  } catch {}
+  return error?.message || fallback;
+};
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
@@ -92,20 +113,32 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, phone: string, selectedRole: AppRole) => {
-    const { data, error } = await supabase.functions.invoke('signup-user', {
-      body: { email, password, fullName, phone, role: selectedRole },
-    });
+    const { data, error } = await withTimeout(
+      supabase.functions.invoke('signup-user', {
+        body: { email, password, fullName, phone, role: selectedRole },
+      }),
+      12000,
+      'Signup took too long. Please try again.'
+    );
 
-    if (error) throw new Error(error.message || 'Signup failed');
+    if (error) throw new Error(await getFunctionErrorMessage(error, 'Signup failed'));
     if (data?.error) throw new Error(data.error);
 
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: signInData, error: signInError } = await withTimeout(
+      supabase.auth.signInWithPassword({ email, password }),
+      10000,
+      'Login took too long. Please try again.'
+    );
     if (signInError) throw signInError;
     return signInData;
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await withTimeout(
+      supabase.auth.signInWithPassword({ email, password }),
+      10000,
+      'Login took too long. Please try again.'
+    );
     if (error) throw error;
     return data;
   };

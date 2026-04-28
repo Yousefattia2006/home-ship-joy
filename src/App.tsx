@@ -39,18 +39,9 @@ import RequireVerified from "./components/RequireVerified";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [showSplash, setShowSplash] = useState(() => {
-    try {
-      return sessionStorage.getItem("tawsel_splash_played") !== "true";
-    } catch {
-      return true;
-    }
-  });
+  const [showSplash, setShowSplash] = useState(true);
 
   const handleSplashFinish = () => {
-    try {
-      sessionStorage.setItem("tawsel_splash_played", "true");
-    } catch {}
     setShowSplash(false);
   };
 
