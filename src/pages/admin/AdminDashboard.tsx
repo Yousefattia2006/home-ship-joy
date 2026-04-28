@@ -19,6 +19,7 @@ export default function AdminDashboard() {
   const { t } = useLanguage();
   const { user, role, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
+  const [authReady, setAuthReady] = useState(false);
   const [tab, setTab] = useState<'overview' | 'applications' | 'drivers' | 'deliveries' | 'stores' | 'analytics' | 'reports' | 'cancellations' | 'broadcasts'>('overview');
   const [drivers, setDrivers] = useState<any[]>([]);
   const [deliveries, setDeliveries] = useState<any[]>([]);
@@ -34,22 +35,33 @@ export default function AdminDashboard() {
   const [adjustDesc, setAdjustDesc] = useState('');
   const [adminNote, setAdminNote] = useState('');
 
-  // Redirect non-admin users
   useEffect(() => {
-    if (!authLoading && (!user || role !== 'admin')) {
+    if (authLoading) return;
+
+    if (!user) {
+      navigate('/admin/login', { replace: true });
+      return;
+    }
+
+    if (role === 'admin') {
+      setAuthReady(true);
+      return;
+    }
+
+    if (role) {
       navigate('/admin/login', { replace: true });
     }
   }, [authLoading, user, role, navigate]);
 
   useEffect(() => {
-    if (authLoading || role !== 'admin') return;
+    if (!authReady) return;
     fetchDrivers();
     fetchDeliveries();
     fetchStores();
     fetchPayoutMethods();
     fetchReports();
     fetchCancellations();
-  }, [authLoading, role]);
+  }, [authReady]);
 
   const fetchDrivers = async () => {
     const { data } = await supabase.from('driver_profiles').select('*').order('created_at', { ascending: false });
@@ -194,7 +206,7 @@ export default function AdminDashboard() {
     { key: 'broadcasts', label: 'Broadcasts' },
   ] as const;
 
-  if (authLoading || role !== 'admin') {
+  if (!authReady) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
