@@ -11,6 +11,27 @@ import { cn } from "@/lib/utils";
 
 type Step = "email" | "code" | "password";
 
+const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, message: string): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
+
+const getFunctionErrorMessage = async (error: any, fallback: string) => {
+  try {
+    const body = await error?.context?.json?.();
+    if (body?.error) return String(body.error);
+  } catch {}
+  return error?.message || fallback;
+};
+
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
@@ -31,10 +52,14 @@ export default function ForgotPassword() {
       // Look up user id via the same RPC the signup uses (service-role only).
       // Frontend can't call it directly, so we hit a tiny edge action: send-otp will fail if user doesn't exist.
       // Instead, ask send-otp to look up by email itself (we extend it below by passing email-only).
-      const { data, error } = await supabase.functions.invoke("send-otp", {
-        body: { action: "send_by_email", email: email.trim().toLowerCase() },
-      });
-      if (error) throw new Error(error.message);
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("send-otp", {
+          body: { action: "send_by_email", email: email.trim().toLowerCase() },
+        }),
+        12000,
+        "Sending the code took too long. Please try again."
+      );
+      if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to send code"));
       if (data?.error) throw new Error(data.error);
       setUserId(data.user_id);
       toast.success("Verification code sent to your email");
@@ -50,11 +75,16 @@ export default function ForgotPassword() {
     if (!userId || code.length !== 6) return toast.error("Enter the 6-digit code");
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-otp", {
-        body: { action: "verify", user_id: userId, otp: code },
-      });
-      if (error) throw new Error(error.message);
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("send-otp", {
+          body: { action: "verify", user_id: userId, otp: code },
+        }),
+        10000,
+        "Verification took too long. Please try again."
+      );
+      if (error) throw new Error(await getFunctionErrorMessage(error, "Verification failed"));
       if (data?.error) throw new Error(data.error);
+      toast.success("Code verified. Choose a new password.");
       setStep("password");
     } catch (e: any) {
       const msg = e?.message;
@@ -68,15 +98,20 @@ export default function ForgotPassword() {
     if (newPassword.length < 6) return toast.error("Password must be at least 6 characters");
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("reset-password", {
-        body: { email: email.trim().toLowerCase(), new_password: newPassword },
-      });
-      if (error) throw new Error(error.message);
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("reset-password", {
+          body: { email: email.trim().toLowerCase(), new_password: newPassword },
+        }),
+        12000,
+        "Password reset took too long. Please try again."
+      );
+      if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to reset password"));
       if (data?.error) throw new Error(data.error);
       toast.success("Password updated. Please log in.");
       navigate("/auth", { replace: true });
     } catch (e: any) {
-      toast.error(e?.message || "Failed to reset password");
+      const msg = e?.message;
+      toast.error(msg === "otp_required" ? "Please verify the code again before updating your password" : (msg || "Failed to reset password"));
     } finally {
       setLoading(false);
     }
