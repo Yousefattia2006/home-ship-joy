@@ -11,6 +11,19 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Loader2, ShieldCheck } from 'lucide-react';
 
+const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, message: string): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
+
 export default function AdminLogin() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
@@ -24,20 +37,28 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        10000,
+        'Login took too long. Please try again.'
+      );
       if (error) throw error;
 
       const userId = data.user?.id;
       if (!userId) throw new Error('Login failed');
 
       // Verify admin role
-      const { data: isAdmin, error: roleError } = await supabase.rpc('has_role', {
-        _user_id: userId,
-        _role: 'admin',
-      });
+      const { data: isAdmin, error: roleError } = await withTimeout(
+        supabase.rpc('has_role', {
+          _user_id: userId,
+          _role: 'admin',
+        }),
+        8000,
+        'Admin check took too long. Please try again.'
+      );
 
       if (roleError || !isAdmin) {
-        await supabase.auth.signOut();
+        await withTimeout(supabase.auth.signOut(), 3000, 'Sign out took too long.');
         throw new Error('Access denied. Admin privileges required.');
       }
 
