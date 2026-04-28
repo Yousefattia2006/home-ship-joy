@@ -57,7 +57,7 @@ export default function RequireVerified({ children }: Props) {
     return () => {
       alive = false;
     };
-  }, [user, loading]);
+  }, [user, role, loading]);
 
   if (loading || checking) {
     return (
