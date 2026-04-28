@@ -25,6 +25,7 @@ import DriverPayments from "./pages/driver/DriverPayments";
 import DriverSettings from "./pages/driver/DriverSettings";
 import DriverSettingsInfo from "./pages/driver/DriverSettingsInfo";
 import DriverTerms from "./pages/driver/DriverTerms";
+import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ChatRoom from "./pages/ChatRoom";
 import Messages from "./pages/Messages";
@@ -93,7 +94,7 @@ const App = () => {
             {/* Notifications */}
             <Route path="/notifications" element={<RequireVerified><Notifications /></RequireVerified>} />
             {/* Admin — same auth page, role-based redirect handles it */}
-            <Route path="/admin/login" element={<Navigate to="/auth" replace />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminDashboard />} />
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
