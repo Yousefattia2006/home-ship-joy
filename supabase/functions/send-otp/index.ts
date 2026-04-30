@@ -163,7 +163,17 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      return json({ is_verified: !!otpRow });
+      if (otpRow) return json({ is_verified: true });
+
+      // Fallback: treat already-confirmed auth users as verified
+      // so existing accounts created before the OTP gate still pass.
+      try {
+        const { data: userRes } = await supabase.auth.admin.getUserById(user_id);
+        const confirmed = !!userRes?.user?.email_confirmed_at;
+        return json({ is_verified: confirmed });
+      } catch {
+        return json({ is_verified: false });
+      }
     }
 
     return json({ error: 'Invalid action' }, 400);
