@@ -34,8 +34,9 @@ export function useAuth() {
     let mounted = true;
     let authVersion = 0;
 
-    const fetchRole = async (userId: string): Promise<AppRole | null> => {
+    const fetchRole = async (authUser: User): Promise<AppRole | null> => {
       try {
+        const userId = authUser.id;
         // Use the SECURITY DEFINER RPC so role checks do not depend on client-side RLS reads.
         const roleChecks = await Promise.all(
           (['admin', 'driver', 'store'] as const).map(async (candidate) => {
@@ -50,7 +51,7 @@ export function useAuth() {
         const matchedRole = roleChecks.find(Boolean);
         if (matchedRole) return matchedRole;
 
-        const metadataRole = user?.user_metadata?.selected_role;
+        const metadataRole = authUser.user_metadata?.selected_role;
         if (metadataRole === 'store' || metadataRole === 'driver') {
           const { data } = await supabase.rpc('has_role', {
             _user_id: userId,
@@ -86,7 +87,7 @@ export function useAuth() {
 
       setLoading(true);
       const userRole = await withTimeout(
-        fetchRole(sessionUser.id),
+        fetchRole(sessionUser),
         8000,
         'Role check took too long.'
       ).catch(() => null);
