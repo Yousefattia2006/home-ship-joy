@@ -32,23 +32,32 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
-    let resolved = false;
+    let authVersion = 0;
 
-    const resolveLoading = () => {
-      if (!mounted || resolved) return;
-      resolved = true;
-      setLoading(false);
-    };
-
-    const fetchRole = async (userId: string): Promise<AppRole | null> => {
+    const fetchRole = async (authUser: User): Promise<AppRole | null> => {
       try {
+        const userId = authUser.id;
         // Use the SECURITY DEFINER RPC so role checks do not depend on client-side RLS reads.
-        for (const candidate of ['admin', 'driver', 'store'] as const) {
+        const roleChecks = await Promise.all(
+          (['admin', 'driver', 'store'] as const).map(async (candidate) => {
+            const { data } = await supabase.rpc('has_role', {
+              _user_id: userId,
+              _role: candidate,
+            });
+            return data ? candidate : null;
+          }),
+        );
+
+        const matchedRole = roleChecks.find(Boolean);
+        if (matchedRole) return matchedRole;
+
+        const metadataRole = authUser.user_metadata?.selected_role;
+        if (metadataRole === 'store' || metadataRole === 'driver') {
           const { data } = await supabase.rpc('has_role', {
             _user_id: userId,
-            _role: candidate,
+            _role: metadataRole,
           });
-          if (data) return candidate;
+          if (data) return metadataRole;
         }
 
         // Fallback for old accounts if role rows are missing.
@@ -66,44 +75,53 @@ export function useAuth() {
       }
     };
 
-    const bootstrap = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-        const u = session?.user ?? null;
-        console.log('[useAuth] bootstrap user:', u?.id ?? 'none');
-        setUser(u);
-        if (u) {
-          const userRole = await fetchRole(u.id);
-          console.log('[useAuth] resolved role:', userRole);
-          if (mounted) setRole(userRole);
-        } else {
-          setRole(null);
-        }
-      } finally {
-        resolveLoading();
+    const resolveSession = async (sessionUser: User | null, version: number) => {
+      if (!mounted || version !== authVersion) return;
+      setUser(sessionUser);
+
+      if (!sessionUser) {
+        setRole(null);
+        setLoading(false);
+        return;
       }
+
+      setLoading(true);
+      const userRole = await withTimeout(
+        fetchRole(sessionUser),
+        8000,
+        'Role check took too long.'
+      ).catch(() => null);
+
+      if (!mounted || version !== authVersion) return;
+      console.log('[useAuth] resolved role:', userRole);
+      setRole(userRole);
+      setLoading(false);
+    };
+
+    const bootstrap = async () => {
+      const version = ++authVersion;
+      const { data: { session } } = await supabase.auth.getSession();
+      const u = session?.user ?? null;
+      console.log('[useAuth] bootstrap user:', u?.id ?? 'none');
+      await resolveSession(u, version);
     };
 
     bootstrap();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
-      try {
-        const u = session?.user ?? null;
-        setUser(u);
-        if (u) {
-          const userRole = await fetchRole(u.id);
-          if (mounted) setRole(userRole);
-        } else {
-          setRole(null);
-        }
-      } finally {
-        resolveLoading();
-      }
+      const version = ++authVersion;
+      const u = session?.user ?? null;
+
+      // Never await Supabase calls inside onAuthStateChange; it can block sign-in completion.
+      window.setTimeout(() => {
+        void resolveSession(u, version);
+      }, 0);
     });
 
-    const safetyTimeout = window.setTimeout(resolveLoading, 3000);
+    const safetyTimeout = window.setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 10000);
 
     return () => {
       mounted = false;
