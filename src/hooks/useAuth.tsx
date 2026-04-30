@@ -17,12 +17,22 @@ const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, message: str
   }
 };
 
-const getFunctionErrorMessage = async (error: any, fallback: string) => {
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message?: unknown }).message || '');
+  }
+  return '';
+};
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
   try {
-    const body = await error?.context?.json?.();
+    const body = await (error as { context?: { json?: () => Promise<{ error?: unknown }> } })?.context?.json?.();
     if (body?.error) return String(body.error);
-  } catch {}
-  return error?.message || fallback;
+  } catch {
+    // Fall back to the standard error message below.
+  }
+  return getErrorMessage(error) || fallback;
 };
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -183,7 +193,9 @@ export function useAuth() {
       Object.keys(localStorage)
         .filter((k) => k.startsWith('sb-') || k.includes('supabase'))
         .forEach((k) => localStorage.removeItem(k));
-    } catch {}
+    } catch {
+      // localStorage cleanup is best-effort only.
+    }
     window.location.replace('/auth');
   };
 
