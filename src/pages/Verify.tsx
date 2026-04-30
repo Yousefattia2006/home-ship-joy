@@ -59,10 +59,15 @@ export default function Verify() {
 
   const queryUserId = params.get("user_id");
   const queryEmail = params.get("email");
-  const stored =
-    typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("pending_verification") || "null")
-      : null;
+  const stored = (() => {
+    try {
+      return typeof window !== "undefined"
+        ? JSON.parse(localStorage.getItem("pending_verification") || "null")
+        : null;
+    } catch {
+      return null;
+    }
+  })();
 
   const userId = queryUserId || stored?.user_id || user?.id || null;
   const email = queryEmail || stored?.email || user?.email || "";
