@@ -7,12 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Loader2, Store, Bike, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Mode = "login" | "signup";
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message?: unknown }).message || "");
+  }
+  return "";
+};
 
 export default function Auth() {
   const { t, lang } = useLanguage();
@@ -50,8 +58,8 @@ export default function Auth() {
       (["admin", "driver", "store"] as const).map(async (candidate) => {
         const res = await withTimeout(
           supabase.rpc("has_role", { _user_id: userId, _role: candidate }),
-          5000
-        );
+          3000
+        ).catch(() => null);
         return res?.data ? candidate : null;
       }),
     );
@@ -70,8 +78,8 @@ export default function Auth() {
           .select("onboarding_completed, approval_status")
           .eq("user_id", userId)
           .maybeSingle(),
-        5000
-      );
+        3000
+      ).catch(() => null);
       const profile = res?.data;
 
       if (!profile || !profile.onboarding_completed) {
@@ -96,13 +104,14 @@ export default function Auth() {
 
     try {
       if (mode === "login") {
-        const data = await signIn(email.trim(), password);
+        const data = await signIn(email.trim().toLowerCase(), password);
         const userId = data.user?.id;
 
         if (!userId) throw new Error("Login failed");
 
         toast.success("Welcome back!");
-        await routeAfterAuth(userId);
+        const metadataRole = data.user?.user_metadata?.selected_role;
+        await routeAfterAuth(userId, metadataRole === "store" || metadataRole === "driver" ? metadataRole : undefined);
       } else {
         if (!fullName.trim()) throw new Error("Please enter your full name");
         if (!phone.trim()) throw new Error("Please enter your phone number");
@@ -123,14 +132,9 @@ export default function Auth() {
 
           toast.success("Account created! Check your email for a verification code.");
 
-          // Fire-and-forget welcome verification email (Verify page will also send one on mount)
-          supabase.functions.invoke("send-otp", {
-            body: { action: "send", user_id: userId, email: email.trim().toLowerCase() },
-          }).catch((e) => console.warn("[Auth] send-otp failed", e));
-
           navigate(`/verify?user_id=${encodeURIComponent(userId)}&email=${encodeURIComponent(email.trim().toLowerCase())}`, { replace: true });
-        } catch (signupErr: any) {
-          const msg = (signupErr?.message || "").toLowerCase();
+        } catch (signupErr: unknown) {
+          const msg = getErrorMessage(signupErr).toLowerCase();
 
           if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already") || msg.includes("user_already_exists")) {
             toast.error("This email is already registered. If you forgot the password, use password reset.");
@@ -141,8 +145,8 @@ export default function Auth() {
           throw signupErr;
         }
       }
-    } catch (err: any) {
-      let msg = err?.message || "Something went wrong. Please try again.";
+    } catch (err: unknown) {
+      let msg = getErrorMessage(err) || "Something went wrong. Please try again.";
       const normalized = String(msg).toLowerCase();
       if (normalized.includes("invalid login credentials")) {
         msg = "Wrong email or password. If this account was removed, please sign up again.";
@@ -196,15 +200,13 @@ export default function Auth() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <AnimatePresence mode="wait">
-              {mode === "signup" && (
-                <motion.div
-                  key="signup-fields"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4 overflow-hidden"
-                >
+            {mode === "signup" && (
+              <motion.div
+                key="signup-fields"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="space-y-4 overflow-hidden"
+              >
                   <div className="space-y-2">
                     <Label htmlFor="fullName" className="text-sm font-medium">
                       {t.auth.fullName}
@@ -260,9 +262,8 @@ export default function Auth() {
                       ))}
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              </motion.div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">

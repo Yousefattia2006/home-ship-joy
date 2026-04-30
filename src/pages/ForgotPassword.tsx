@@ -24,12 +24,29 @@ const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, message: str
   }
 };
 
-const getFunctionErrorMessage = async (error: any, fallback: string) => {
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message?: unknown }).message || "");
+  }
+  return "";
+};
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
   try {
-    const body = await error?.context?.json?.();
+    const body = await (error as { context?: { json?: () => Promise<{ error?: unknown }> } })?.context?.json?.();
     if (body?.error) return String(body.error);
-  } catch {}
-  return error?.message || fallback;
+  } catch {
+    // Fall back to the standard error message below.
+  }
+  return getErrorMessage(error) || fallback;
+};
+
+const otpErrorText = (msg?: string) => {
+  if (msg === "invalid_otp" || msg === "no_otp_found") return "Wrong code. Please check the latest OTP email and try again.";
+  if (msg === "otp_expired") return "This code expired. Please resend a new code.";
+  if (msg === "too_many_attempts") return "Too many wrong attempts. Please resend a new code.";
+  return "Verification failed. Please try again.";
 };
 
 export default function ForgotPassword() {
@@ -46,6 +63,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
 
   const sendCode = async () => {
+    if (loading) return;
     if (!email.trim()) return toast.error("Enter your email");
     setLoading(true);
     try {
@@ -62,16 +80,19 @@ export default function ForgotPassword() {
       if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to send code"));
       if (data?.error) throw new Error(data.error);
       setUserId(data.user_id);
+      setCode("");
       toast.success("Verification code sent to your email");
       setStep("code");
-    } catch (e: any) {
-      toast.error(e?.message === "no_account" ? "No account with that email" : (e?.message || "Failed to send code"));
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      toast.error(message === "no_account" ? "No account with that email" : (message || "Failed to send code"));
     } finally {
       setLoading(false);
     }
   };
 
   const verifyCode = async () => {
+    if (loading) return;
     if (!userId || code.length !== 6) return toast.error("Enter the 6-digit code");
     setLoading(true);
     try {
@@ -86,15 +107,16 @@ export default function ForgotPassword() {
       if (data?.error) throw new Error(data.error);
       toast.success("Code verified. Choose a new password.");
       setStep("password");
-    } catch (e: any) {
-      const msg = e?.message;
-      toast.error(msg === "invalid_otp" ? "Invalid code" : msg === "otp_expired" ? "Code expired" : "Verification failed");
+    } catch (e: unknown) {
+      const msg = getErrorMessage(e);
+      toast.error(otpErrorText(msg));
     } finally {
       setLoading(false);
     }
   };
 
   const resetPassword = async () => {
+    if (loading) return;
     if (newPassword.length < 6) return toast.error("Password must be at least 6 characters");
     setLoading(true);
     try {
@@ -109,8 +131,8 @@ export default function ForgotPassword() {
       if (data?.error) throw new Error(data.error);
       toast.success("Password updated. Please log in.");
       navigate("/auth", { replace: true });
-    } catch (e: any) {
-      const msg = e?.message;
+    } catch (e: unknown) {
+      const msg = getErrorMessage(e);
       toast.error(msg === "otp_required" ? "Please verify the code again before updating your password" : (msg || "Failed to reset password"));
     } finally {
       setLoading(false);

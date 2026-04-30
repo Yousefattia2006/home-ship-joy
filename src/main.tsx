@@ -9,6 +9,7 @@ import "./index.css";
     if (Capacitor.isNativePlatform()) {
       const { ScreenOrientation } = await import("@capacitor/screen-orientation");
       await ScreenOrientation.lock({ orientation: "portrait" });
+      document.documentElement.classList.add("capacitor-native");
     }
   } catch (e) {
     // No-op on web

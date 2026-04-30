@@ -17,13 +17,25 @@ const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, message: str
   }
 };
 
-const getFunctionErrorMessage = async (error: any, fallback: string) => {
-  try {
-    const body = await error?.context?.json?.();
-    if (body?.error) return String(body.error);
-  } catch {}
-  return error?.message || fallback;
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message?: unknown }).message || '');
+  }
+  return '';
 };
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  try {
+    const body = await (error as { context?: { json?: () => Promise<{ error?: unknown }> } })?.context?.json?.();
+    if (body?.error) return String(body.error);
+  } catch {
+    // Fall back to the standard error message below.
+  }
+  return getErrorMessage(error) || fallback;
+};
+
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -40,10 +52,11 @@ export function useAuth() {
         // Use the SECURITY DEFINER RPC so role checks do not depend on client-side RLS reads.
         const roleChecks = await Promise.all(
           (['admin', 'driver', 'store'] as const).map(async (candidate) => {
-            const { data } = await supabase.rpc('has_role', {
-              _user_id: userId,
-              _role: candidate,
-            });
+            const { data } = await withTimeout(
+              supabase.rpc('has_role', { _user_id: userId, _role: candidate }),
+              3000,
+              'Role check timed out.'
+            ).catch(() => ({ data: false }));
             return data ? candidate : null;
           }),
         );
@@ -53,10 +66,11 @@ export function useAuth() {
 
         const metadataRole = authUser.user_metadata?.selected_role;
         if (metadataRole === 'store' || metadataRole === 'driver') {
-          const { data } = await supabase.rpc('has_role', {
-            _user_id: userId,
-            _role: metadataRole,
-          });
+          const { data } = await withTimeout(
+            supabase.rpc('has_role', { _user_id: userId, _role: metadataRole }),
+            3000,
+            'Role check timed out.'
+          ).catch(() => ({ data: false }));
           if (data) return metadataRole;
         }
 
@@ -88,7 +102,7 @@ export function useAuth() {
       setLoading(true);
       const userRole = await withTimeout(
         fetchRole(sessionUser),
-        8000,
+        5000,
         'Role check took too long.'
       ).catch(() => null);
 
@@ -131,9 +145,10 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, phone: string, selectedRole: AppRole) => {
+    const cleanEmail = normalizeEmail(email);
     const { data, error } = await withTimeout(
       supabase.functions.invoke('signup-user', {
-        body: { email, password, fullName, phone, role: selectedRole },
+        body: { email: cleanEmail, password, fullName, phone, role: selectedRole },
       }),
       12000,
       'Signup took too long. Please try again.'
@@ -143,7 +158,7 @@ export function useAuth() {
     if (data?.error) throw new Error(data.error);
 
     const { data: signInData, error: signInError } = await withTimeout(
-      supabase.auth.signInWithPassword({ email, password }),
+      supabase.auth.signInWithPassword({ email: cleanEmail, password }),
       10000,
       'Login took too long. Please try again.'
     );
@@ -153,8 +168,8 @@ export function useAuth() {
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await withTimeout(
-      supabase.auth.signInWithPassword({ email, password }),
-      10000,
+      supabase.auth.signInWithPassword({ email: normalizeEmail(email), password }),
+      8000,
       'Login took too long. Please try again.'
     );
     if (error) throw error;
@@ -178,7 +193,9 @@ export function useAuth() {
       Object.keys(localStorage)
         .filter((k) => k.startsWith('sb-') || k.includes('supabase'))
         .forEach((k) => localStorage.removeItem(k));
-    } catch {}
+    } catch {
+      // localStorage cleanup is best-effort only.
+    }
     window.location.replace('/auth');
   };
 
