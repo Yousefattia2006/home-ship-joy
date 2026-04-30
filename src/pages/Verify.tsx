@@ -76,8 +76,7 @@ export default function Verify() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const initialSendDone = useRef(false);
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN);
 
   useEffect(() => {
     if (!userId || !email) {
@@ -102,8 +101,9 @@ export default function Verify() {
     }
   }, [userId, email, role]);
 
-  const sendCode = async (silent = false) => {
+  const sendCode = async () => {
     if (!userId || !email) return;
+    if (resending || cooldown > 0) return;
     setResending(true);
     try {
       const { data, error } = await withTimeout(
@@ -115,25 +115,15 @@ export default function Verify() {
       );
       if (error) throw new Error(await getFunctionErrorMessage(error, t.verify.resendError));
       if (data?.error) throw new Error(data.error);
-      if (!silent) toast.success(t.verify.resent);
+      toast.success(t.verify.resent);
       setCooldown(RESEND_COOLDOWN);
       setCode("");
     } catch (e: unknown) {
-      if (!silent) toast.error(getErrorMessage(e) || t.verify.resendError);
+      toast.error(getErrorMessage(e) || t.verify.resendError);
     } finally {
       setResending(false);
     }
   };
-
-  // Auto-send once on first mount if not already on cooldown (covers case where signup
-  // didn't pre-send or the user reopens the app on the verify page).
-  useEffect(() => {
-    if (initialSendDone.current) return;
-    if (!userId || !email) return;
-    initialSendDone.current = true;
-    sendCode(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, email]);
 
   const verify = async () => {
     if (!userId || code.length !== 6) {
@@ -154,40 +144,27 @@ export default function Verify() {
       localStorage.removeItem("pending_verification");
       toast.success(t.verify.success);
 
-      // Resolve role and route
-      let resolvedRole: "store" | "driver" | "admin" | null = null;
-      const roleChecks = await Promise.all(
+      // Use stored role for instant routing; the dashboards will hydrate the rest.
+      const resolvedRole: "store" | "driver" | null = role ?? null;
+
+      if (resolvedRole === "store") return navigate("/store", { replace: true });
+      if (resolvedRole === "driver") return navigate("/driver/onboarding", { replace: true });
+
+      // Fallback: try one quick role lookup, otherwise go home
+      const checks = await Promise.all(
         (["admin", "driver", "store"] as const).map(async (candidate) => {
           const res = await withTimeout(
             supabase.rpc("has_role", { _user_id: userId, _role: candidate }),
-            5000,
+            2500,
             "Role check timed out."
           ).catch(() => null);
           return res?.data ? candidate : null;
         })
       );
-      resolvedRole = roleChecks.find(Boolean) ?? null;
-      if (!resolvedRole && role) resolvedRole = role;
-
-      if (resolvedRole === "admin") return navigate("/admin", { replace: true });
-      if (resolvedRole === "store") return navigate("/store", { replace: true });
-      if (resolvedRole === "driver") {
-        const res = await withTimeout(
-          supabase
-            .from("driver_profiles")
-            .select("onboarding_completed, approval_status")
-            .eq("user_id", userId)
-            .maybeSingle(),
-          5000,
-          "Driver profile check timed out."
-        ).catch(() => null);
-        const profile = res?.data;
-        if (!profile || !profile.onboarding_completed)
-          return navigate("/driver/onboarding", { replace: true });
-        if (profile.approval_status === "pending" || profile.approval_status === "rejected")
-          return navigate("/driver/status", { replace: true });
-        return navigate("/driver", { replace: true });
-      }
+      const fallback = checks.find(Boolean) ?? null;
+      if (fallback === "admin") return navigate("/admin", { replace: true });
+      if (fallback === "store") return navigate("/store", { replace: true });
+      if (fallback === "driver") return navigate("/driver/onboarding", { replace: true });
       navigate("/", { replace: true });
     } catch (e: unknown) {
       const msg = getErrorMessage(e);
