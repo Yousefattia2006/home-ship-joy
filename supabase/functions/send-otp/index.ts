@@ -39,19 +39,13 @@ Deno.serve(async (req) => {
     // Convenience: look up user_id by email (used by forgot-password and post-signup verification)
     if (action === 'send_by_email') {
       if (!email) {
-        return new Response(JSON.stringify({ error: 'email required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'email required' }, 400);
       }
       const { data: foundId, error: lookupErr } = await supabase.rpc('get_user_id_by_email', {
         _email: String(email).trim().toLowerCase(),
       });
       if (lookupErr || !foundId) {
-        return new Response(JSON.stringify({ error: 'no_account' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'no_account' }, 404);
       }
       user_id = foundId;
     }
@@ -59,10 +53,7 @@ Deno.serve(async (req) => {
     // ── SEND OTP ──
     if (action === 'send' || action === 'send_by_email') {
       if (!user_id || !email) {
-        return new Response(JSON.stringify({ error: 'user_id and email required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'user_id and email required' }, 400);
       }
 
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -126,10 +117,7 @@ Deno.serve(async (req) => {
     // ── VERIFY OTP ──
     if (action === 'verify') {
       if (!user_id || !otp) {
-        return new Response(JSON.stringify({ error: 'user_id and otp required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'user_id and otp required' }, 400);
       }
 
       const { data: otpRow, error } = await supabase
@@ -152,27 +140,19 @@ Deno.serve(async (req) => {
 
       const inputHash = await hashOTP(otp);
       if (inputHash !== otpRow.otp_hash) {
-        return new Response(JSON.stringify({ error: 'invalid_otp' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'invalid_otp' }, 400);
       }
 
       // Mark as verified
       await supabase.from('email_otps').update({ is_verified: true }).eq('id', otpRow.id);
 
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ success: true });
     }
 
     // ── CHECK VERIFICATION STATUS ──
     if (action === 'check') {
       if (!user_id) {
-        return new Response(JSON.stringify({ error: 'user_id required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'user_id required' }, 400);
       }
 
       const { data: otpRow } = await supabase
@@ -183,20 +163,12 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      return new Response(JSON.stringify({ is_verified: !!otpRow }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ is_verified: !!otpRow });
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid action' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Invalid action' }, 400);
   } catch (err) {
     console.error('send-otp error:', err);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Internal server error' }, 500);
   }
 });
