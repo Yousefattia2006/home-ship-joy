@@ -46,16 +46,17 @@ export default function Auth() {
   const routeAfterAuth = async (userId: string, fallbackRole?: "store" | "driver") => {
     let resolvedRole: "store" | "driver" | "admin" | null = null;
 
-    for (const candidate of ["admin", "driver", "store"] as const) {
-      const res = await withTimeout(
-        supabase.rpc("has_role", { _user_id: userId, _role: candidate }),
-        5000
-      );
-      if (res?.data) {
-        resolvedRole = candidate;
-        break;
-      }
-    }
+    const roleChecks = await Promise.all(
+      (["admin", "driver", "store"] as const).map(async (candidate) => {
+        const res = await withTimeout(
+          supabase.rpc("has_role", { _user_id: userId, _role: candidate }),
+          5000
+        );
+        return res?.data ? candidate : null;
+      }),
+    );
+
+    resolvedRole = roleChecks.find(Boolean) ?? null;
 
     if (!resolvedRole && fallbackRole) resolvedRole = fallbackRole;
 
