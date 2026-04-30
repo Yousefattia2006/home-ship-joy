@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Loader2, Store, Bike, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -192,15 +192,13 @@ export default function Auth() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <AnimatePresence mode="wait">
-              {mode === "signup" && (
-                <motion.div
-                  key="signup-fields"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4 overflow-hidden"
-                >
+            {mode === "signup" && (
+              <motion.div
+                key="signup-fields"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="space-y-4 overflow-hidden"
+              >
                   <div className="space-y-2">
                     <Label htmlFor="fullName" className="text-sm font-medium">
                       {t.auth.fullName}
@@ -256,9 +254,8 @@ export default function Auth() {
                       ))}
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              </motion.div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
