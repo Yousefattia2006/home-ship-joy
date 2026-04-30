@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
 async function hashOTP(otp: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(otp);
@@ -63,7 +70,7 @@ Deno.serve(async (req) => {
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
       // Remove any existing OTPs for this user
-      await supabase.from('email_otps').delete().eq('user_id', user_id);
+      await supabase.from('email_otps').delete().eq('user_id', user_id).eq('is_verified', false);
 
       // Insert new OTP
       const { error: insertError } = await supabase.from('email_otps').insert({
@@ -74,19 +81,13 @@ Deno.serve(async (req) => {
       });
 
       if (insertError) {
-        return new Response(JSON.stringify({ error: insertError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: insertError.message }, 500);
       }
 
       // Send email via Resend
       const resendKey = Deno.env.get('RESEND_API_KEY');
       if (!resendKey) {
-        return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'RESEND_API_KEY not configured' }, 500);
       }
 
       const emailRes = await fetch('https://api.resend.com/emails', {
@@ -115,15 +116,11 @@ Deno.serve(async (req) => {
       if (!emailRes.ok) {
         const errBody = await emailRes.text();
         console.error('Resend error:', errBody);
-        return new Response(JSON.stringify({ error: 'Failed to send email' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        await supabase.from('email_otps').delete().eq('user_id', user_id).eq('otp_hash', otpHash);
+        return json({ error: 'Failed to send email' }, 500);
       }
 
-      return new Response(JSON.stringify({ success: true, user_id }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ success: true, user_id });
     }
 
     // ── VERIFY OTP ──
@@ -145,17 +142,12 @@ Deno.serve(async (req) => {
         .single();
 
       if (error || !otpRow) {
-        return new Response(JSON.stringify({ error: 'no_otp_found' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'no_otp_found' }, 400);
       }
 
       if (new Date(otpRow.expires_at) < new Date()) {
-        return new Response(JSON.stringify({ error: 'otp_expired' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        await supabase.from('email_otps').delete().eq('id', otpRow.id);
+        return json({ error: 'otp_expired' }, 400);
       }
 
       const inputHash = await hashOTP(otp);
