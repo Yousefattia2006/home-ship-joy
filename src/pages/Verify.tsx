@@ -25,12 +25,22 @@ const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, message: str
   }
 };
 
-const getFunctionErrorMessage = async (error: any, fallback: string) => {
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message?: unknown }).message || "");
+  }
+  return "";
+};
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string) => {
   try {
-    const body = await error?.context?.json?.();
+    const body = await (error as { context?: { json?: () => Promise<{ error?: unknown }> } })?.context?.json?.();
     if (body?.error) return String(body.error);
-  } catch {}
-  return error?.message || fallback;
+  } catch {
+    // Fall back to the standard error message below.
+  }
+  return getErrorMessage(error) || fallback;
 };
 
 const otpErrorText = (msg?: string) => {
@@ -103,8 +113,8 @@ export default function Verify() {
       if (!silent) toast.success(t.verify.resent);
       setCooldown(RESEND_COOLDOWN);
       setCode("");
-    } catch (e: any) {
-      if (!silent) toast.error(e?.message || t.verify.resendError);
+    } catch (e: unknown) {
+      if (!silent) toast.error(getErrorMessage(e) || t.verify.resendError);
     } finally {
       setResending(false);
     }
@@ -174,8 +184,8 @@ export default function Verify() {
         return navigate("/driver", { replace: true });
       }
       navigate("/", { replace: true });
-    } catch (e: any) {
-      const msg = e?.message;
+    } catch (e: unknown) {
+      const msg = getErrorMessage(e);
       toast.error(otpErrorText(msg));
     } finally {
       setLoading(false);
