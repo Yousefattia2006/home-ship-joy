@@ -14,6 +14,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 type Mode = "login" | "signup";
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message?: unknown }).message || "");
+  }
+  return "";
+};
+
 export default function Auth() {
   const { t, lang } = useLanguage();
   const { signIn, signUp } = useAuth();
@@ -125,8 +133,8 @@ export default function Auth() {
           toast.success("Account created! Check your email for a verification code.");
 
           navigate(`/verify?user_id=${encodeURIComponent(userId)}&email=${encodeURIComponent(email.trim().toLowerCase())}`, { replace: true });
-        } catch (signupErr: any) {
-          const msg = (signupErr?.message || "").toLowerCase();
+        } catch (signupErr: unknown) {
+          const msg = getErrorMessage(signupErr).toLowerCase();
 
           if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already") || msg.includes("user_already_exists")) {
             toast.error("This email is already registered. If you forgot the password, use password reset.");
@@ -137,8 +145,8 @@ export default function Auth() {
           throw signupErr;
         }
       }
-    } catch (err: any) {
-      let msg = err?.message || "Something went wrong. Please try again.";
+    } catch (err: unknown) {
+      let msg = getErrorMessage(err) || "Something went wrong. Please try again.";
       const normalized = String(msg).toLowerCase();
       if (normalized.includes("invalid login credentials")) {
         msg = "Wrong email or password. If this account was removed, please sign up again.";
