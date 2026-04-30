@@ -12,6 +12,34 @@ import { cn } from "@/lib/utils";
 
 const RESEND_COOLDOWN = 45;
 
+const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, message: string): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
+
+const getFunctionErrorMessage = async (error: any, fallback: string) => {
+  try {
+    const body = await error?.context?.json?.();
+    if (body?.error) return String(body.error);
+  } catch {}
+  return error?.message || fallback;
+};
+
+const otpErrorText = (msg?: string) => {
+  if (msg === "invalid_otp" || msg === "no_otp_found") return "Wrong code. Please check the latest OTP email and try again.";
+  if (msg === "otp_expired") return "This code expired. Please resend a new code.";
+  if (msg === "too_many_attempts") return "Too many wrong attempts. Please resend a new code.";
+  return "Could not verify the code. Please try again.";
+};
+
 export default function Verify() {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
@@ -63,13 +91,18 @@ export default function Verify() {
     if (!userId || !email) return;
     setResending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-otp", {
-        body: { action: "send", user_id: userId, email },
-      });
-      if (error) throw new Error(error.message);
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("send-otp", {
+          body: { action: "send", user_id: userId, email },
+        }),
+        12000,
+        "Sending the code took too long. Please try again."
+      );
+      if (error) throw new Error(await getFunctionErrorMessage(error, t.verify.resendError));
       if (data?.error) throw new Error(data.error);
       if (!silent) toast.success(t.verify.resent);
       setCooldown(RESEND_COOLDOWN);
+      setCode("");
     } catch (e: any) {
       if (!silent) toast.error(e?.message || t.verify.resendError);
     } finally {
@@ -93,10 +126,14 @@ export default function Verify() {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-otp", {
-        body: { action: "verify", user_id: userId, otp: code },
-      });
-      if (error) throw new Error(error.message);
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("send-otp", {
+          body: { action: "verify", user_id: userId, otp: code },
+        }),
+        10000,
+        "Verification took too long. Please try again."
+      );
+      if (error) throw new Error(await getFunctionErrorMessage(error, t.verify.verifyError));
       if (data?.error) throw new Error(data.error);
 
       localStorage.removeItem("pending_verification");
@@ -104,26 +141,32 @@ export default function Verify() {
 
       // Resolve role and route
       let resolvedRole: "store" | "driver" | "admin" | null = null;
-      for (const candidate of ["admin", "driver", "store"] as const) {
-        const { data: hr } = await supabase.rpc("has_role", {
-          _user_id: userId,
-          _role: candidate,
-        });
-        if (hr) {
-          resolvedRole = candidate;
-          break;
-        }
-      }
+      const roleChecks = await Promise.all(
+        (["admin", "driver", "store"] as const).map(async (candidate) => {
+          const res = await withTimeout(
+            supabase.rpc("has_role", { _user_id: userId, _role: candidate }),
+            5000,
+            "Role check timed out."
+          ).catch(() => null);
+          return res?.data ? candidate : null;
+        })
+      );
+      resolvedRole = roleChecks.find(Boolean) ?? null;
       if (!resolvedRole && role) resolvedRole = role;
 
       if (resolvedRole === "admin") return navigate("/admin", { replace: true });
       if (resolvedRole === "store") return navigate("/store", { replace: true });
       if (resolvedRole === "driver") {
-        const { data: profile } = await supabase
-          .from("driver_profiles")
-          .select("onboarding_completed, approval_status")
-          .eq("user_id", userId)
-          .maybeSingle();
+        const res = await withTimeout(
+          supabase
+            .from("driver_profiles")
+            .select("onboarding_completed, approval_status")
+            .eq("user_id", userId)
+            .maybeSingle(),
+          5000,
+          "Driver profile check timed out."
+        ).catch(() => null);
+        const profile = res?.data;
         if (!profile || !profile.onboarding_completed)
           return navigate("/driver/onboarding", { replace: true });
         if (profile.approval_status === "pending" || profile.approval_status === "rejected")
@@ -133,13 +176,7 @@ export default function Verify() {
       navigate("/", { replace: true });
     } catch (e: any) {
       const msg = e?.message;
-      toast.error(
-        msg === "invalid_otp"
-          ? t.verify.invalidOtp
-          : msg === "otp_expired"
-            ? t.verify.otpExpired
-            : t.verify.verifyError,
-      );
+      toast.error(otpErrorText(msg));
     } finally {
       setLoading(false);
     }
