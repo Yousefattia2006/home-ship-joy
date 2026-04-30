@@ -228,7 +228,7 @@ export default function Verify() {
             ) : (
               <button
                 type="button"
-                onClick={() => sendCode(false)}
+                onClick={() => sendCode()}
                 disabled={resending}
                 className="text-accent font-semibold"
               >
