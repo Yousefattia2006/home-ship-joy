@@ -9,10 +9,13 @@
   "plugins": {
     "ScreenOrientation": {
       "lockOrientation": "portrait"
+    },
+    "Keyboard": {
+      "resize": "body"
     }
   },
   "ios": {
-    "contentInset": "always"
+    "contentInset": "never"
   },
   "android": {
     "allowMixedContent": true
