@@ -50,8 +50,8 @@ export default function Auth() {
       (["admin", "driver", "store"] as const).map(async (candidate) => {
         const res = await withTimeout(
           supabase.rpc("has_role", { _user_id: userId, _role: candidate }),
-          5000
-        );
+          3000
+        ).catch(() => null);
         return res?.data ? candidate : null;
       }),
     );
@@ -70,8 +70,8 @@ export default function Auth() {
           .select("onboarding_completed, approval_status")
           .eq("user_id", userId)
           .maybeSingle(),
-        5000
-      );
+        3000
+      ).catch(() => null);
       const profile = res?.data;
 
       if (!profile || !profile.onboarding_completed) {
@@ -96,13 +96,14 @@ export default function Auth() {
 
     try {
       if (mode === "login") {
-        const data = await signIn(email.trim(), password);
+        const data = await signIn(email.trim().toLowerCase(), password);
         const userId = data.user?.id;
 
         if (!userId) throw new Error("Login failed");
 
         toast.success("Welcome back!");
-        await routeAfterAuth(userId);
+        const metadataRole = data.user?.user_metadata?.selected_role;
+        await routeAfterAuth(userId, metadataRole === "store" || metadataRole === "driver" ? metadataRole : undefined);
       } else {
         if (!fullName.trim()) throw new Error("Please enter your full name");
         if (!phone.trim()) throw new Error("Please enter your phone number");
