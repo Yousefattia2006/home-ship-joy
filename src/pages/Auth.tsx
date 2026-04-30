@@ -123,11 +123,6 @@ export default function Auth() {
 
           toast.success("Account created! Check your email for a verification code.");
 
-          // Fire-and-forget welcome verification email (Verify page will also send one on mount)
-          supabase.functions.invoke("send-otp", {
-            body: { action: "send", user_id: userId, email: email.trim().toLowerCase() },
-          }).catch((e) => console.warn("[Auth] send-otp failed", e));
-
           navigate(`/verify?user_id=${encodeURIComponent(userId)}&email=${encodeURIComponent(email.trim().toLowerCase())}`, { replace: true });
         } catch (signupErr: any) {
           const msg = (signupErr?.message || "").toLowerCase();
