@@ -32,6 +32,13 @@ const getFunctionErrorMessage = async (error: any, fallback: string) => {
   return error?.message || fallback;
 };
 
+const otpErrorText = (msg?: string) => {
+  if (msg === "invalid_otp" || msg === "no_otp_found") return "Wrong code. Please check the latest OTP email and try again.";
+  if (msg === "otp_expired") return "This code expired. Please resend a new code.";
+  if (msg === "too_many_attempts") return "Too many wrong attempts. Please resend a new code.";
+  return "Verification failed. Please try again.";
+};
+
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
@@ -46,6 +53,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
 
   const sendCode = async () => {
+    if (loading) return;
     if (!email.trim()) return toast.error("Enter your email");
     setLoading(true);
     try {
@@ -62,6 +70,7 @@ export default function ForgotPassword() {
       if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to send code"));
       if (data?.error) throw new Error(data.error);
       setUserId(data.user_id);
+      setCode("");
       toast.success("Verification code sent to your email");
       setStep("code");
     } catch (e: any) {
@@ -72,6 +81,7 @@ export default function ForgotPassword() {
   };
 
   const verifyCode = async () => {
+    if (loading) return;
     if (!userId || code.length !== 6) return toast.error("Enter the 6-digit code");
     setLoading(true);
     try {
@@ -88,13 +98,14 @@ export default function ForgotPassword() {
       setStep("password");
     } catch (e: any) {
       const msg = e?.message;
-      toast.error(msg === "invalid_otp" ? "Invalid code" : msg === "otp_expired" ? "Code expired" : "Verification failed");
+      toast.error(otpErrorText(msg));
     } finally {
       setLoading(false);
     }
   };
 
   const resetPassword = async () => {
+    if (loading) return;
     if (newPassword.length < 6) return toast.error("Password must be at least 6 characters");
     setLoading(true);
     try {
