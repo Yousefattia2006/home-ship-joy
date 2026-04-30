@@ -1,11 +1,9 @@
-import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/i18n/LanguageContext";
-import SplashScreen from "@/components/SplashScreen";
 import Index from "./pages/Index";
 import StoreDashboard from "./pages/store/StoreDashboard";
 import CreateDelivery from "./pages/store/CreateDelivery";
@@ -39,17 +37,10 @@ import RequireVerified from "./components/RequireVerified";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [showSplash, setShowSplash] = useState(true);
-
-  const handleSplashFinish = () => {
-    setShowSplash(false);
-  };
-
   return (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <TooltipProvider>
-        {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
         <Toaster />
         <Sonner />
         <BrowserRouter>
