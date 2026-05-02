@@ -42,9 +42,10 @@ Deno.serve(async (req) => {
     await admin.from('user_roles').delete().eq('user_id', user_id);
     await admin.from('email_otps').delete().eq('user_id', user_id);
 
-    // Delete the auth user so the email is freed up
+    // Delete the auth user so the email is freed up.
+    // Treat "User not found" as success — it just means cleanup already happened.
     const { error: delErr } = await admin.auth.admin.deleteUser(user_id);
-    if (delErr) {
+    if (delErr && !/not[\s_-]?found/i.test(delErr.message)) {
       return new Response(JSON.stringify({ error: delErr.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
