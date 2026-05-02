@@ -136,9 +136,17 @@ export default function Auth() {
         } catch (signupErr: unknown) {
           const msg = getErrorMessage(signupErr).toLowerCase();
 
-          if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already") || msg.includes("user_already_exists")) {
-            toast.error("This email is already registered. If you forgot the password, use password reset.");
+          if (
+            msg.includes("already registered") ||
+            msg.includes("already exists") ||
+            msg.includes("user already") ||
+            msg.includes("user_already_exists") ||
+            msg.includes("409")
+          ) {
+            toast.error("This email is already registered. Please sign in instead, or use 'Forgot password' to reset it.");
             setMode("login");
+            // Keep the email filled in so the user can sign in immediately
+            setPassword("");
             return;
           }
 
