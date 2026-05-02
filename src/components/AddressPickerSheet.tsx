@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { MapPicker } from '@/components/MapPicker';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 
 interface AddressPickerSheetProps {
@@ -149,30 +150,70 @@ export function AddressPickerSheet({
   };
 
   const handleCurrentLocation = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      toast.error((t.addressPicker as any)?.locationUnsupported || 'Location not supported on this device');
+      return;
+    }
     setLocating(true);
+
+    // Hard safety timeout — never let the spinner hang forever
+    const safety = setTimeout(() => {
+      setLocating(false);
+      toast.error((t.addressPicker as any)?.locationTimeout || 'Could not get your location. Please try again.');
+    }, 15000);
+
+    const finish = (address: string, lat: number, lng: number) => {
+      clearTimeout(safety);
+      setLocating(false);
+      onSelect(address, lat, lng);
+      onClose();
+    };
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        // Try reverse geocoding
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode(
-          { location: { lat: latitude, lng: longitude } },
-          (results, status) => {
-            setLocating(false);
-            if (status === 'OK' && results && results[0]) {
-              onSelect(results[0].formatted_address, latitude, longitude);
-            } else {
-              onSelect(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, latitude, longitude);
-            }
-            onClose();
+        const fallback = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        try {
+          if (typeof google === 'undefined' || !google.maps?.Geocoder) {
+            finish(fallback, latitude, longitude);
+            return;
           }
-        );
+          const geocoder = new google.maps.Geocoder();
+          // Race the geocoder against a 6s timeout so we still confirm the pin
+          let settled = false;
+          const geoTimer = setTimeout(() => {
+            if (!settled) {
+              settled = true;
+              finish(fallback, latitude, longitude);
+            }
+          }, 6000);
+          geocoder.geocode(
+            { location: { lat: latitude, lng: longitude } },
+            (results, status) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(geoTimer);
+              if (status === 'OK' && results && results[0]) {
+                finish(results[0].formatted_address, latitude, longitude);
+              } else {
+                finish(fallback, latitude, longitude);
+              }
+            }
+          );
+        } catch {
+          finish(fallback, latitude, longitude);
+        }
       },
-      () => {
+      (err) => {
+        clearTimeout(safety);
         setLocating(false);
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? ((t.addressPicker as any)?.locationDenied || 'Location permission denied. Enable it in your settings.')
+            : ((t.addressPicker as any)?.locationFailed || 'Could not get your location. Please try again.');
+        toast.error(msg);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   };
 
