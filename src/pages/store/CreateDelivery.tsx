@@ -105,16 +105,17 @@ export default function CreateDelivery() {
         <h1 className="text-lg font-bold">{t.store.createDelivery}</h1>
       </div>
 
-      <GoogleMapView
-        className="mx-5 h-60 mb-4"
-        pickupLocation={pickupCoords}
-        dropoffLocation={dropoffCoords}
-        pickupLabel="P"
-        dropoffLabel="D"
-        showCurrentLocationBtn
-        routePath={price.routePath}
-      />
-
+      {pickupCoords && dropoffCoords && (
+        <GoogleMapView
+          className="mx-5 h-60 mb-4"
+          pickupLocation={pickupCoords}
+          dropoffLocation={dropoffCoords}
+          pickupLabel="P"
+          dropoffLabel="D"
+          showCurrentLocationBtn
+          routePath={price.routePath}
+        />
+      )}
       <form onSubmit={handleSubmit} className="px-5 pb-8 space-y-4">
         {/* Pickup */}
         <button
