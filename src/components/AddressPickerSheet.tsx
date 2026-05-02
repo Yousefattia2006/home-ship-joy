@@ -151,7 +151,7 @@ export function AddressPickerSheet({
 
   const handleCurrentLocation = () => {
     if (!navigator.geolocation) {
-      toast.error(t.addressPicker?.locationUnsupported || 'Location not supported on this device');
+      toast.error((t.addressPicker as any)?.locationUnsupported || 'Location not supported on this device');
       return;
     }
     setLocating(true);
@@ -159,7 +159,7 @@ export function AddressPickerSheet({
     // Hard safety timeout — never let the spinner hang forever
     const safety = setTimeout(() => {
       setLocating(false);
-      toast.error(t.addressPicker?.locationTimeout || 'Could not get your location. Please try again.');
+      toast.error((t.addressPicker as any)?.locationTimeout || 'Could not get your location. Please try again.');
     }, 15000);
 
     const finish = (address: string, lat: number, lng: number) => {
@@ -209,8 +209,8 @@ export function AddressPickerSheet({
         setLocating(false);
         const msg =
           err.code === err.PERMISSION_DENIED
-            ? (t.addressPicker?.locationDenied || 'Location permission denied. Enable it in your settings.')
-            : (t.addressPicker?.locationFailed || 'Could not get your location. Please try again.');
+            ? ((t.addressPicker as any)?.locationDenied || 'Location permission denied. Enable it in your settings.')
+            : ((t.addressPicker as any)?.locationFailed || 'Could not get your location. Please try again.');
         toast.error(msg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
