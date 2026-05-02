@@ -114,8 +114,12 @@ export function useAuth() {
 
     const bootstrap = async () => {
       const version = ++authVersion;
-      const { data: { session } } = await supabase.auth.getSession();
-      const u = session?.user ?? null;
+      const sessionRes = await withTimeout(
+        supabase.auth.getSession(),
+        5000,
+        'Session restore took too long.'
+      ).catch(() => ({ data: { session: null } }));
+      const u = sessionRes.data.session?.user ?? null;
       console.log('[useAuth] bootstrap user:', u?.id ?? 'none');
       await resolveSession(u, version);
     };

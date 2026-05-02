@@ -68,8 +68,14 @@ export default function Auth() {
 
     if (!resolvedRole && fallbackRole) resolvedRole = fallbackRole;
 
-    if (resolvedRole === "admin") return navigate("/admin", { replace: true });
-    if (resolvedRole === "store") return navigate("/store", { replace: true });
+    if (resolvedRole === "admin") {
+      navigate("/admin", { replace: true });
+      return true;
+    }
+    if (resolvedRole === "store") {
+      navigate("/store", { replace: true });
+      return true;
+    }
 
     if (resolvedRole === "driver") {
       const res = await withTimeout(
@@ -83,17 +89,21 @@ export default function Auth() {
       const profile = res?.data;
 
       if (!profile || !profile.onboarding_completed) {
-        return navigate("/driver/onboarding", { replace: true });
+        navigate("/driver/onboarding", { replace: true });
+        return true;
       }
 
       if (profile.approval_status === "pending" || profile.approval_status === "rejected") {
-        return navigate("/driver/status", { replace: true });
+        navigate("/driver/status", { replace: true });
+        return true;
       }
 
-      return navigate("/driver", { replace: true });
+      navigate("/driver", { replace: true });
+      return true;
     }
 
     navigate("/", { replace: true });
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,7 +121,11 @@ export default function Auth() {
 
         toast.success("Welcome back!");
         const metadataRole = data.user?.user_metadata?.selected_role;
-        await routeAfterAuth(userId, metadataRole === "store" || metadataRole === "driver" ? metadataRole : undefined);
+        const routed = await withTimeout(
+          routeAfterAuth(userId, metadataRole === "store" || metadataRole === "driver" ? metadataRole : undefined),
+          5000
+        );
+        if (!routed) navigate("/", { replace: true });
       } else {
         if (!fullName.trim()) throw new Error("Please enter your full name");
         if (!phone.trim()) throw new Error("Please enter your phone number");
