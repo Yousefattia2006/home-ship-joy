@@ -137,7 +137,7 @@ export default function DriverOnboarding() {
         uid = session?.user?.id;
       }
       if (!uid) {
-        toast.error('Session expired. Please log in again.');
+        toast.error('Session expired. Please logg in again.');
         navigate('/auth', { replace: true });
         return;
       }

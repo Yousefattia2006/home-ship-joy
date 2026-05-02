@@ -129,7 +129,7 @@ export default function ForgotPassword() {
       );
       if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to reset password"));
       if (data?.error) throw new Error(data.error);
-      toast.success("Password updated. Please log in.");
+      toast.success("Password updated. Please logg in.");
       navigate("/auth", { replace: true });
     } catch (e: unknown) {
       const msg = getErrorMessage(e);
