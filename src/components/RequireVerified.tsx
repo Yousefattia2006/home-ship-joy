@@ -20,6 +20,11 @@ export default function RequireVerified({ children }: Props) {
   const location = useLocation();
 
   useEffect(() => {
+    setChecking(true);
+    setVerified(null);
+  }, [user?.id]);
+
+  useEffect(() => {
     let alive = true;
     if (loading) return;
     if (!user) {
