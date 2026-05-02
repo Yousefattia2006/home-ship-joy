@@ -150,8 +150,9 @@ export function AddressPickerSheet({
   };
 
   const handleCurrentLocation = () => {
+    const ap: any = t.addressPicker;
     if (!navigator.geolocation) {
-      toast.error((t.addressPicker as any)?.locationUnsupported || 'Location not supported on this device');
+      toast.error(ap?.locationUnsupported || 'Location not supported on this device');
       return;
     }
     setLocating(true);
