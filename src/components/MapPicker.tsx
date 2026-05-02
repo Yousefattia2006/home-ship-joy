@@ -120,6 +120,7 @@ export function MapPicker({ open, onClose, onConfirm, title, confirmLabel, initi
               disableDefaultUI: true,
               zoomControl: false,
               styles: mapStyles,
+              gestureHandling: 'greedy',
             }}
           />
         ) : (
