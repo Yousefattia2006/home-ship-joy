@@ -95,6 +95,7 @@ export function GoogleMapView({
     streetViewControl: false,
     fullscreenControl: false,
     styles: mapStyles,
+    gestureHandling: 'greedy',
   };
 
   const polylinePath = useMemo(() => {
