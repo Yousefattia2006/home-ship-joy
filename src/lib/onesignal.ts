@@ -12,14 +12,18 @@ export async function initOneSignal() {
     const { Capacitor } = await import('@capacitor/core');
     if (!Capacitor.isNativePlatform()) return;
 
+    await waitForCordovaReady();
+
     // Dynamic import so web bundling doesn't choke
     const mod: any = await import('onesignal-cordova-plugin');
     const OneSignal = mod.default ?? mod;
 
     OneSignal.initialize(ONESIGNAL_APP_ID);
 
-    // Ask permission on iOS (Android handled by manifest)
-    OneSignal.Notifications.requestPermission(true).catch(() => {});
+    // Ask permission, then explicitly opt in the push subscription.
+    // OneSignal v5 can have a logged-in user that is still unsubscribed.
+    await OneSignal.Notifications.requestPermission(true).catch(() => false);
+    try { OneSignal.User?.pushSubscription?.optIn?.(); } catch { /* noop */ }
 
     initialized = true;
 
@@ -47,5 +51,23 @@ export async function linkOneSignalToCurrentUser() {
     const OneSignal = mod.default ?? mod;
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.id) OneSignal.login(user.id);
+    try { OneSignal.User?.pushSubscription?.optIn?.(); } catch { /* noop */ }
   } catch { /* noop */ }
+}
+
+async function waitForCordovaReady() {
+  if (typeof window === 'undefined') return;
+  if ((window as any).cordova?.exec) return;
+
+  await new Promise<void>((resolve) => {
+    const timeout = window.setTimeout(resolve, 4000);
+    document.addEventListener(
+      'deviceready',
+      () => {
+        window.clearTimeout(timeout);
+        resolve();
+      },
+      { once: true },
+    );
+  });
 }

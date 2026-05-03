@@ -84,14 +84,17 @@ Deno.serve(async (req) => {
         if (insErr) throw insErr;
       }
 
+      let pushWarning: string | null = null;
+
       // Fire OneSignal push (best-effort; don't fail broadcast if push fails)
       try {
         const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
         const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY');
         if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY) {
+          const pushErrors: string[] = [];
           for (let i = 0; i < recipientIds.length; i += 2000) {
             const chunk = recipientIds.slice(i, i + 2000);
-            await fetch('https://api.onesignal.com/notifications', {
+            const pushRes = await fetch('https://api.onesignal.com/notifications', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -106,10 +109,19 @@ Deno.serve(async (req) => {
                 data: { type: 'admin_broadcast', broadcast_id: b.id },
               }),
             });
+            const pushJson = await pushRes.json().catch(() => ({}));
+            if (!pushRes.ok || pushJson.errors) {
+              pushErrors.push(JSON.stringify(pushJson.errors ?? pushJson));
+            }
+          }
+          if (pushErrors.length > 0) {
+            pushWarning = `OneSignal: ${pushErrors.join('; ')}`;
+            console.error(`OneSignal push errors for broadcast ${b.id}: ${pushWarning}`);
           }
         }
       } catch (_pushErr) {
-        // swallow push errors — DB notifications already inserted
+        pushWarning = `OneSignal: ${(_pushErr as Error).message}`;
+        console.error(`OneSignal push failed for broadcast ${b.id}:`, _pushErr);
       }
 
       await supabase
@@ -118,7 +130,7 @@ Deno.serve(async (req) => {
           status: 'sent',
           recipients_count: recipientIds.length,
           sent_at: new Date().toISOString(),
-          error: null,
+          error: pushWarning,
         })
         .eq('id', b.id);
 
