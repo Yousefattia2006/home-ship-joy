@@ -10,7 +10,7 @@ export const translations = {
     },
     auth: {
       checkEmail: 'Check your email to verify your account',
-      login: 'Logg In',
+      login: 'Log In',
       signup: 'Sign Up',
       email: 'Email',
       password: 'Password',
