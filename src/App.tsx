@@ -33,10 +33,13 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Verify from "./pages/Verify";
 import NotFound from "./pages/NotFound";
 import RequireVerified from "./components/RequireVerified";
+import { useEffect } from "react";
+import { initOneSignal } from "@/lib/onesignal";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  useEffect(() => { initOneSignal(); }, []);
   return (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
