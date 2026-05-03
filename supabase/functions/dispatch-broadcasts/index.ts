@@ -89,9 +89,10 @@ Deno.serve(async (req) => {
         const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
         const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY');
         if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY) {
+          const pushErrors: string[] = [];
           for (let i = 0; i < recipientIds.length; i += 2000) {
             const chunk = recipientIds.slice(i, i + 2000);
-            await fetch('https://api.onesignal.com/notifications', {
+            const pushRes = await fetch('https://api.onesignal.com/notifications', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -106,10 +107,17 @@ Deno.serve(async (req) => {
                 data: { type: 'admin_broadcast', broadcast_id: b.id },
               }),
             });
+            const pushJson = await pushRes.json().catch(() => ({}));
+            if (!pushRes.ok || pushJson.errors) {
+              pushErrors.push(JSON.stringify(pushJson.errors ?? pushJson));
+            }
+          }
+          if (pushErrors.length > 0) {
+            console.error(`OneSignal push errors for broadcast ${b.id}: ${pushErrors.join('; ')}`);
           }
         }
       } catch (_pushErr) {
-        // swallow push errors — DB notifications already inserted
+        console.error(`OneSignal push failed for broadcast ${b.id}:`, _pushErr);
       }
 
       await supabase
