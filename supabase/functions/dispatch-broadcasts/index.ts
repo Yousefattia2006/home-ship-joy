@@ -84,6 +84,34 @@ Deno.serve(async (req) => {
         if (insErr) throw insErr;
       }
 
+      // Fire OneSignal push (best-effort; don't fail broadcast if push fails)
+      try {
+        const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
+        const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY');
+        if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY) {
+          for (let i = 0; i < recipientIds.length; i += 2000) {
+            const chunk = recipientIds.slice(i, i + 2000);
+            await fetch('https://api.onesignal.com/notifications', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Key ${ONESIGNAL_REST_API_KEY}`,
+              },
+              body: JSON.stringify({
+                app_id: ONESIGNAL_APP_ID,
+                target_channel: 'push',
+                include_aliases: { external_id: chunk },
+                headings: { en: b.title },
+                contents: { en: b.body },
+                data: { type: 'admin_broadcast', broadcast_id: b.id },
+              }),
+            });
+          }
+        }
+      } catch (_pushErr) {
+        // swallow push errors — DB notifications already inserted
+      }
+
       await supabase
         .from('admin_broadcasts')
         .update({
