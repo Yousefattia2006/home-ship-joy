@@ -84,6 +84,8 @@ Deno.serve(async (req) => {
         if (insErr) throw insErr;
       }
 
+      let pushWarning: string | null = null;
+
       // Fire OneSignal push (best-effort; don't fail broadcast if push fails)
       try {
         const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
@@ -113,10 +115,12 @@ Deno.serve(async (req) => {
             }
           }
           if (pushErrors.length > 0) {
-            console.error(`OneSignal push errors for broadcast ${b.id}: ${pushErrors.join('; ')}`);
+            pushWarning = `OneSignal: ${pushErrors.join('; ')}`;
+            console.error(`OneSignal push errors for broadcast ${b.id}: ${pushWarning}`);
           }
         }
       } catch (_pushErr) {
+        pushWarning = `OneSignal: ${(_pushErr as Error).message}`;
         console.error(`OneSignal push failed for broadcast ${b.id}:`, _pushErr);
       }
 
@@ -126,7 +130,7 @@ Deno.serve(async (req) => {
           status: 'sent',
           recipients_count: recipientIds.length,
           sent_at: new Date().toISOString(),
-          error: null,
+          error: pushWarning,
         })
         .eq('id', b.id);
 
