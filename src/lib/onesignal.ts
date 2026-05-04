@@ -7,6 +7,20 @@ const ONESIGNAL_APP_ID = '36a48b08-ef24-43e3-8f26-78f0d7369b6e';
 let initialized = false;
 let authListenerAttached = false;
 
+export interface OneSignalDebugInfo {
+  platform: string;
+  available: boolean;
+  permission: boolean | null;
+  nativePermission: unknown;
+  optedIn: boolean | null;
+  subscriptionId: string | null;
+  token: string | null;
+  externalId: string | null;
+  oneSignalId: string | null;
+  supabaseUserId: string | null;
+  error?: string;
+}
+
 export async function initOneSignal() {
   if (initialized) return;
   try {
@@ -52,6 +66,71 @@ export async function linkOneSignalToCurrentUser() {
     const OneSignal = mod.default ?? mod;
     await ensureOneSignalSubscription(OneSignal);
   } catch { /* noop */ }
+}
+
+export async function getOneSignalDebugInfo(): Promise<OneSignalDebugInfo> {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    const platform = Capacitor.getPlatform();
+    if (!Capacitor.isNativePlatform()) {
+      return emptyDebugInfo(platform, user?.id ?? null, false);
+    }
+
+    await waitForCordovaReady();
+    const mod: any = await import('onesignal-cordova-plugin');
+    const OneSignal = mod.default ?? mod;
+
+    if (!initialized) {
+      OneSignal.initialize(ONESIGNAL_APP_ID);
+      initialized = true;
+    }
+    await ensureOneSignalSubscription(OneSignal, user?.id);
+
+    const [permission, nativePermission, optedIn, subscriptionId, token, externalId, oneSignalId] = await Promise.all([
+      OneSignal.Notifications?.getPermissionAsync?.().catch(() => null) ?? null,
+      OneSignal.Notifications?.permissionNative?.().catch(() => null) ?? null,
+      OneSignal.User?.pushSubscription?.getOptedInAsync?.().catch(() => null) ?? null,
+      OneSignal.User?.pushSubscription?.getIdAsync?.().catch(() => null) ?? null,
+      OneSignal.User?.pushSubscription?.getTokenAsync?.().catch(() => null) ?? null,
+      OneSignal.User?.getExternalId?.().catch(() => null) ?? null,
+      OneSignal.User?.getOnesignalId?.().catch(() => null) ?? null,
+    ]);
+
+    return {
+      platform,
+      available: true,
+      permission: typeof permission === 'boolean' ? permission : null,
+      nativePermission,
+      optedIn: typeof optedIn === 'boolean' ? optedIn : null,
+      subscriptionId: subscriptionId || null,
+      token: token || null,
+      externalId: externalId || null,
+      oneSignalId: oneSignalId || null,
+      supabaseUserId: user?.id ?? null,
+    };
+  } catch (e) {
+    return {
+      ...emptyDebugInfo('native', user?.id ?? null, true),
+      error: (e as Error).message,
+    };
+  }
+}
+
+function emptyDebugInfo(platform: string, supabaseUserId: string | null, available: boolean): OneSignalDebugInfo {
+  return {
+    platform,
+    available,
+    permission: null,
+    nativePermission: null,
+    optedIn: null,
+    subscriptionId: null,
+    token: null,
+    externalId: null,
+    oneSignalId: null,
+    supabaseUserId,
+  };
 }
 
 async function ensureOneSignalSubscription(OneSignal: any, knownUserId?: string) {
