@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Send, Clock, Trash2, Loader2, Megaphone } from 'lucide-react';
+import { getOneSignalDebugInfo, type OneSignalDebugInfo } from '@/lib/onesignal';
+import { Send, Clock, Trash2, Loader2, Megaphone, Smartphone, RefreshCcw } from 'lucide-react';
 
 type Audience = 'all' | 'drivers' | 'stores' | 'user';
 
@@ -41,6 +42,8 @@ export default function AdminBroadcasts() {
   const [submitting, setSubmitting] = useState(false);
   const [history, setHistory] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pushDebug, setPushDebug] = useState<OneSignalDebugInfo | null>(null);
+  const [checkingPush, setCheckingPush] = useState(false);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -56,6 +59,21 @@ export default function AdminBroadcasts() {
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  const refreshPushDebug = async () => {
+    setCheckingPush(true);
+    try {
+      const info = await getOneSignalDebugInfo();
+      setPushDebug(info);
+      const ready = info.available && info.permission === true && info.optedIn === true && !!info.subscriptionId && info.externalId === info.supabaseUserId;
+      if (ready) toast.success('This device is subscribed for push');
+      else toast.error('Push subscription is not ready on this device');
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not check push status');
+    } finally {
+      setCheckingPush(false);
+    }
+  };
 
   const reset = () => {
     setTitle('');
