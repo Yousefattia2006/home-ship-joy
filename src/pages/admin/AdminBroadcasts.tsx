@@ -211,6 +211,18 @@ export default function AdminBroadcasts() {
     return map[s] || 'bg-muted text-muted-foreground';
   };
 
+  const pushReady = !!pushDebug?.available
+    && pushDebug.permission === true
+    && pushDebug.optedIn === true
+    && !!pushDebug.subscriptionId
+    && pushDebug.externalId === pushDebug.supabaseUserId;
+
+  const shortValue = (value: unknown) => {
+    if (value === null || value === undefined || value === '') return '—';
+    const text = String(value);
+    return text.length > 24 ? `${text.slice(0, 10)}…${text.slice(-8)}` : text;
+  };
+
   return (
     <div className="space-y-5">
       {/* Composer */}
