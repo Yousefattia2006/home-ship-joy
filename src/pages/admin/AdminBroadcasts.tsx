@@ -225,6 +225,44 @@ export default function AdminBroadcasts() {
 
   return (
     <div className="space-y-5">
+      <div className="bg-card rounded-xl p-4 border border-border space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Smartphone className="w-4 h-4 text-accent shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Push status</p>
+              <p className="text-[10px] text-muted-foreground truncate">
+                {pushDebug
+                  ? pushReady ? 'This device is subscribed' : 'This device is not ready for push'
+                  : 'Check this device before testing broadcasts'}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={refreshPushDebug}
+            disabled={checkingPush}
+            className="h-8 gap-1 shrink-0"
+          >
+            {checkingPush ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
+            Check
+          </Button>
+        </div>
+        {pushDebug && (
+          <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+            <span>Permission: {String(pushDebug.permission)}</span>
+            <span>Opted in: {String(pushDebug.optedIn)}</span>
+            <span>Player: {shortValue(pushDebug.subscriptionId)}</span>
+            <span>Token: {shortValue(pushDebug.token)}</span>
+            <span>External: {shortValue(pushDebug.externalId)}</span>
+            <span>User: {shortValue(pushDebug.supabaseUserId)}</span>
+            {pushDebug.error && <span className="col-span-2 text-destructive">⚠ {pushDebug.error}</span>}
+          </div>
+        )}
+      </div>
+
       {/* Composer */}
       <div className="bg-card rounded-xl p-4 border border-border space-y-4">
         <div className="flex items-center gap-2">
