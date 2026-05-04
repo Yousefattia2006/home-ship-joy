@@ -199,7 +199,6 @@ export type Database = {
           dropoff_lng: number | null
           id: string
           notes: string | null
-          otp_code: string | null
           package_size: Database["public"]["Enums"]["package_size"] | null
           payout_amount: number | null
           picked_up_at: string | null
@@ -230,7 +229,6 @@ export type Database = {
           dropoff_lng?: number | null
           id?: string
           notes?: string | null
-          otp_code?: string | null
           package_size?: Database["public"]["Enums"]["package_size"] | null
           payout_amount?: number | null
           picked_up_at?: string | null
@@ -261,7 +259,6 @@ export type Database = {
           dropoff_lng?: number | null
           id?: string
           notes?: string | null
-          otp_code?: string | null
           package_size?: Database["public"]["Enums"]["package_size"] | null
           payout_amount?: number | null
           picked_up_at?: string | null
@@ -277,6 +274,32 @@ export type Database = {
           vehicle_type?: Database["public"]["Enums"]["vehicle_type"]
         }
         Relationships: []
+      }
+      delivery_otps: {
+        Row: {
+          created_at: string
+          delivery_id: string
+          otp_code: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_id: string
+          otp_code: string
+        }
+        Update: {
+          created_at?: string
+          delivery_id?: string
+          otp_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_otps_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: true
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       direct_messages: {
         Row: {
